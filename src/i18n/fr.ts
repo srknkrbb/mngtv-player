@@ -515,6 +515,7 @@ export const FR_MESSAGES = {
   'matches.ended': 'Finished',
   'matches.until': 'until {time}',
   'matches.world': 'World',
+  'matches.otherFeeds': '+{count} more feeds',
   'matches.endedBadge': 'ENDED',
   'matches.upcomingBadge': 'SOON',
   'matches.empty': 'No matches listed today.',

@@ -501,6 +501,7 @@ export const TR_MESSAGES = {
   'matches.ended': 'Biten',
   'matches.until': '{time}\'e kadar',
   'matches.world': 'Dünya',
+  'matches.otherFeeds': '+{count} yayın',
   'matches.endedBadge': 'BİTTİ',
   'matches.upcomingBadge': 'YAKINDA',
   'matches.empty': 'Bugün listede maç yok.',

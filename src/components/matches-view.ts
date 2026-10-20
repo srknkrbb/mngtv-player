@@ -35,6 +35,25 @@ export interface MatchRow {
   world: boolean;       // DUNYA grubu
   key: string;          // "Ev - Deplasman" (skor tablosu anahtari)
   score: MatchScore | null;
+  alts?: number;        // ayni macin diger yayinlari (TR + DUNYA kopyalari tek satirda)
+}
+
+/** Ayni mac (ayni takimlar, ayni baslangic) tek satir: Turkce yayin (TR grubu) once; digerleri 'alts' sayisi olur. */
+export function mergeDuplicateMatches(rows: MatchRow[]): MatchRow[] {
+  const norm = (k: string): string => k.toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]+/gu, '');
+  const byKey = new Map<string, MatchRow>();
+  const out: MatchRow[] = [];
+  for (const r of rows) {
+    const id = `${norm(r.key)}|${r.start ? Math.round(r.start.getTime() / 60000) : ''}`;
+    const prev = byKey.get(id);
+    if (!prev) { byKey.set(id, r); out.push(r); continue; }
+    const keep = prev.world && !r.world ? r : prev;
+    const drop = keep === prev ? r : prev;
+    keep.alts = (prev.alts ?? 0) + (r.alts ?? 0) + 1;
+    if (!keep.score && drop.score) keep.score = drop.score;
+    if (keep !== prev) { out[out.indexOf(prev)] = keep; byKey.set(id, keep); }
+  }
+  return out;
 }
 
 const TIME_PREFIX = /^\((\d{1,2})[:.](\d{2})\)\s*/;
@@ -139,7 +158,7 @@ export function buildMatchRows(
       : (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0))
     || Number(a.world) - Number(b.world)
     || a.index - b.index);
-  return rows;
+  return mergeDuplicateMatches(rows);
 }
 
 export class MatchesView {
@@ -319,6 +338,7 @@ export class MatchesView {
             <div class="matches-meta">
               ${endTime ? html`<span class="matches-end">${t('matches.until', { time: endTime })}</span>` : ''}
               ${row.world ? html`<span class="matches-world">${t('matches.world')}</span>` : ''}
+              ${row.alts ? html`<span class="matches-alts">${t('matches.otherFeeds', { count: row.alts })}</span>` : ''}
             </div>
           </div>
           <div class="matches-status">

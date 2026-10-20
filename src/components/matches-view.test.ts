@@ -41,6 +41,22 @@ describe('Gunun Maclari satirlari', () => {
     expect(rows.find(r => r.title.startsWith('Ajax'))?.world).toBe(true);
   });
 
+  it('ayni mac TR ve DUNYA grubunda: tek satir, Turkce yayin kalir, +1 yayin', () => {
+    const dup = [
+      ch('(14:15) Paris FC-Rennes · Bein Sport 04', 'DUNYA GUNUN MACLARI'),
+      ch('(14:15) Paris FC-Rennes Bein Connect 4', 'TURKIYE GUNUN MACLARI'),
+    ];
+    const e = new Map<string, Programme[]>([
+      [dup[0].name, [prog('CANLI: Paris FC - Rennes | Bein Sport 04', now - H, now + H)]],
+      [dup[1].name, [prog('CANLI: Paris FC - Rennes | Bein Connect 4', now - H, now + H)]],
+    ]);
+    const rows = buildMatchRows(dup, c => e.get(c.name) ?? null, now);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe('Paris FC-Rennes Bein Connect 4');
+    expect(rows[0].world).toBe(false);
+    expect(rows[0].alts).toBe(1);
+  });
+
   it('grup deseni', () => {
     expect(isMatchGroup('TURKIYE GUNUN MACLARI')).toBe(true);
     expect(isMatchGroup('DUNYA GUNUN MACLARI DIGER')).toBe(false);   // futbol disi: Maclar'da yok
