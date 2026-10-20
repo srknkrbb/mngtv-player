@@ -10,6 +10,7 @@ import {
   rankPrepared,
   rankPreparedNamesTopK,
   rankPreparedTopK,
+  buildNamePrefixIndex,
 } from './channel-search';
 
 function ch(name: string, id = name): Channel {
@@ -156,5 +157,57 @@ describe('rankByFields', () => {
     const result = rankPreparedTopK(prepared, 'alpha', 2);
     expect(result.items).toEqual(items.slice(0, 2));
     expect(result.hasMore).toBe(true);
+  });
+});
+
+describe('mngtv: on-ek dizini, daraltma ve bulanik sinirlari', () => {
+  const pool = ['Bein Sport 1', 'Bein Sport 2', 'S Sport Plus', 'Sport TV', 'The Sporting Life', 'Transport', 'Kanal D', 'Deport Sport', 'abc sport'];
+  const items = pool.map(name => ({ name }));
+
+  it('on-ek dizini duz taramayla ayni siralamayi verir', () => {
+    for (const q of ['sp', 'sport', 'ort', 'bein sport 1', 'z', 'd', 'tv']) {
+      for (const limit of [1, 3, 100]) {
+        const plain = rankPreparedNamesTopK(prepareNameSearchItems(items), q, limit).items.map(i => i.name);
+        const index = prepareNameSearchItems(items);
+        buildNamePrefixIndex(index);
+        const fast = rankPreparedNamesTopK(index, q, limit).items.map(i => i.name);
+        expect(fast, `${q}/${limit}`).toEqual(plain);
+      }
+    }
+  });
+
+  it('daraltma: aday listesi disindakiler taranmaz, direct listesi tam doner', () => {
+    const index = prepareNameSearchItems(items);
+    const first = rankPreparedNamesTopK(index, 'sp', 100, { collectDirect: true });
+    expect(first.direct).toHaveLength(8);
+    const second = rankPreparedNamesTopK(index, 'spor', 100, { candidates: first.direct, collectDirect: true });
+    expect(second.items.map(i => i.name)).toEqual(
+      rankPreparedNamesTopK(prepareNameSearchItems(items), 'spor', 100).items.map(i => i.name));
+    expect(second.direct).toHaveLength(8);
+    const none = rankPreparedNamesTopK(index, 'spx', 100, { candidates: [], collectDirect: true });
+    expect(none.items).toEqual([]);
+  });
+
+  it('on-ek dizini sonuc siniri dolunca direct listesi vermez (tier 3 taranmadi)', () => {
+    const index = prepareNameSearchItems(items);
+    buildNamePrefixIndex(index);
+    const r = rankPreparedNamesTopK(index, 'sp', 2, { collectDirect: true });
+    expect(r.items).toHaveLength(2);
+    expect(r.hasMore).toBe(true);
+    expect(r.direct).toBeUndefined();
+  });
+
+  it('bulanik tarama kisa sorguda ve haric alanda calismaz', () => {
+    const prepared = prepareSearchItems(
+      [{ title: 'Haber', description: 'spor bulteni' }, { title: 'Film', description: 'drama' }],
+      item => [item.title, item.description],
+    );
+    expect(rankPreparedTopK(prepared, 'spro', 10).items.map(i => i.title)).toEqual(['Haber']);
+    expect(rankPreparedTopK(prepared, 'spro', 10, { fuzzySkipField: 1 }).items).toEqual([]);
+    expect(rankPreparedTopK(prepared, 'hab', 10, { fuzzyMinLength: 3 }).items.map(i => i.title)).toEqual(['Haber']);
+    expect(rankPreparedTopK(prepared, 'hb', 10, { fuzzyMinLength: 3 }).items).toEqual([]);
+    const direct = rankPreparedTopK(prepared, 'a', 10, { collectDirect: true });
+    expect(direct.direct).toEqual([0, 1]);
+    expect(rankPreparedTopK(prepared, 'am', 10, { candidates: [1], collectDirect: true }).direct).toEqual([1]);
   });
 });

@@ -386,18 +386,22 @@ export class Search {
     this.query = query;
     this.resultLimit = CONFIG.SEARCH.INITIAL_RESULTS;
     const generation = ++this.queryGeneration;
-    if (this.queryFrame !== null) cancelAnimationFrame(this.queryFrame);
+    if (this.queryFrame !== null) this.cancelQueryTimer();
     if (!query.trim()) {
       this.queryFrame = null;
       this.clearResults();
       this.render();
       return;
     }
-    this.queryFrame = requestAnimationFrame(() => {
+    const fire = (): void => {
       this.queryFrame = null;
       if (generation !== this.queryGeneration) return;
       void this.startQuery(generation);
-    });
+    };
+    // mngtv: TV'de tus basina sorgu yerine kisa bir bekleme; eski sorgular worker'da da atlanir.
+    this.queryFrame = CONFIG.MNGTV.SEARCH.DEBOUNCE_MS > 0
+      ? window.setTimeout(fire, CONFIG.MNGTV.SEARCH.DEBOUNCE_MS)
+      : requestAnimationFrame(fire);
   }
 
   async refreshPrograms(): Promise<void> {
@@ -1121,7 +1125,8 @@ export class Search {
     }
     if (!preserveOffsets) {
       this.queryPending = true;
-      this.render();
+      // mngtv: eski sonuclar yeni cevap gelene kadar ekranda kalir (bos govde cizilmez).
+      if (!CONFIG.MNGTV.SEARCH.KEEP_RESULTS_WHILE_PENDING || !this.hasAnyResults()) this.render();
     }
     let response: SearchQueryResponse | null = null;
     let recoveryAttempted = false;
@@ -1174,6 +1179,7 @@ export class Search {
         return;
       }
     }
+    if (response?.superseded) return; // worker daha yeni bir sorguyu calistirdi; onun cevabi cizer
     if (response && !sameLists(lists, this.indexedLists())) {
       // The lists changed under the reply, so its indices may not map onto them.
       return this.runWorkerQuery(generation, preserveOffsets);
@@ -1371,6 +1377,11 @@ export class Search {
     this.visibleSeries = itemsAt(series, response.series.indices);
     this.hasMoreResults = response.channels.hasMore || response.programmes.hasMore
       || response.movies.hasMore || response.series.hasMore;
+  }
+
+  private hasAnyResults(): boolean {
+    return this.visibleChannels.length > 0 || this.visiblePrograms.length > 0
+      || this.visibleMovies.length > 0 || this.visibleSeries.length > 0;
   }
 
   private clearResults(): void {
@@ -1577,7 +1588,7 @@ export class Search {
       ? html``
       : this.pendingIndex
         ? html`<p class="catalog-hint search-empty">${t('search.preparing')}</p>`
-      : this.queryPending
+      : this.queryPending && !(CONFIG.MNGTV.SEARCH.KEEP_RESULTS_WHILE_PENDING && hasResults)
         ? html``
         : !hasResults
         ? html`<p class="catalog-hint search-empty">${t('search.empty')}</p>`
@@ -1770,7 +1781,13 @@ export class Search {
 
   private cancelScheduledQuery(): void {
     this.queryGeneration++;
-    if (this.queryFrame !== null) cancelAnimationFrame(this.queryFrame);
+    this.cancelQueryTimer();
+  }
+
+  private cancelQueryTimer(): void {
+    if (this.queryFrame === null) return;
+    if (CONFIG.MNGTV.SEARCH.DEBOUNCE_MS > 0) clearTimeout(this.queryFrame);
+    else cancelAnimationFrame(this.queryFrame);
     this.queryFrame = null;
   }
 }

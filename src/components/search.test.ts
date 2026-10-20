@@ -128,6 +128,8 @@ const prog = (title: string, start: number, stop: number): Programme => ({
 
 let container: HTMLElement;
 beforeEach(() => {
+  // Upstream testleri kare tabanli; mngtv debounce'u ayri bir testte dogrulanir.
+  CONFIG.MNGTV.SEARCH.DEBOUNCE_MS = 0;
   Element.prototype.scrollIntoView = vi.fn();
   vi.clearAllMocks();
   workerMock.terminate();
@@ -243,6 +245,7 @@ async function openWith(opts: { vod?: unknown[]; series?: unknown[] } = {}) {
 }
 
 afterEach(() => {
+  CONFIG.MNGTV.SEARCH.DEBOUNCE_MS = 150;
   // An active view's unfinished index build or query would run into the next test.
   for (const view of openViews.splice(0)) view.deactivate();
   // A failed assertion skips a test's own mockRestore.
@@ -1141,7 +1144,7 @@ describe('Search', () => {
     );
     const { view } = await openWith({ vod: many });
     await view.setQuery('movie');
-    expect(initial).toBe(200);
+    expect(initial).toBe(CONFIG.SEARCH.INITIAL_RESULTS);
     expect(container.querySelectorAll('.catalog-tile[data-stream-id]').length).toBeLessThan(30);
     expect(container.querySelector<HTMLElement>(
       '[data-search-virtual="movies"] .search-virtual-rail-spacer',
@@ -1194,6 +1197,20 @@ describe('Search', () => {
     const { view } = await openWith();
     view.scheduleQuery('alpha');
     view.scheduleQuery('bravo');
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(container.textContent).toContain('Bravo');
+    expect(container.textContent).not.toContain('Alpha');
+  });
+
+  it('mngtv: debounce ile yalniz son sorgu, bekleme sonunda calisir', async () => {
+    CONFIG.MNGTV.SEARCH.DEBOUNCE_MS = 40;
+    playlistMock.channels = [chan('Alpha'), chan('Bravo')];
+    const { view } = await openWith();
+    view.scheduleQuery('alpha');
+    view.scheduleQuery('bravo');
+    await new Promise<void>(resolve => setTimeout(resolve, 10));
+    expect(container.textContent).not.toContain('Bravo');
+    await new Promise<void>(resolve => setTimeout(resolve, 80));
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     expect(container.textContent).toContain('Bravo');
     expect(container.textContent).not.toContain('Alpha');

@@ -1,8 +1,10 @@
 import {
   foldSearchText,
   prepareFoldedSearchItem,
+  buildNamePrefixIndex,
   rankPreparedNamesTopK,
   rankPreparedTopK,
+  type RankOptions,
   type PreparedNameSearchIndex,
   type PreparedSearchItem,
 } from '../utils/channel-search';
@@ -79,8 +81,12 @@ export class SearchWorkerIndex {
     return this.serialize(() => this.applyIndex(request));
   }
 
+  private queryTicket = 0;
+
   query(request: SearchQueryRequest): SearchQueryResponse | null | Promise<SearchQueryResponse | null> {
-    return this.serialize(() => this.runQuery(request));
+    // mngtv: siradaki sorgular birikmesin; yalniz en son istenen calisir.
+    const ticket = ++this.queryTicket;
+    return this.serialize(() => (ticket === this.queryTicket ? this.runQuery(request) : supersededResult()));
   }
 
   // One source per turn, so a Search open waits behind at most one build.
@@ -328,6 +334,7 @@ export class SearchWorkerIndex {
     if (chunk.names) for (const name of chunk.names) staged.names.push(name);
     if (count + incoming.length < chunk.total) return true;
     delete this.staging[source];
+    this.narrow = null;
     if (source === 'channels') this.setChannels(staged.documents);
     else if (source === 'programmes') this.programmes = prepareFolded(foldDocuments(staged.documents));
     else if (source === 'movies') this.movies = foldedNames(staged.names.map(foldSearchText));
@@ -336,6 +343,7 @@ export class SearchWorkerIndex {
   }
 
   private clear(source: SearchIndexSource): void {
+    this.narrow = null;
     if (source === 'channels') this.setChannels([]);
     else if (source === 'programmes') this.programmes = [];
     else if (source === 'movies') this.movies = emptyNames();
@@ -347,18 +355,53 @@ export class SearchWorkerIndex {
     this.channels = prepareFolded(this.channelDocuments);
   }
 
+  // mngtv: son sorgunun dogrudan eslesme kumeleri; sorgu uzatilinca yalniz bunlar taranir.
+  private narrow: {
+    sessionId: number;
+    q: string;
+    channels?: number[];
+    programmes?: number[];
+    movies?: number[];
+    series?: number[];
+  } | null = null;
+
   private runQuery(request: SearchQueryRequest): SearchQueryResponse | null {
     if (request.sessionId !== this.sessionId) return null;
-    return {
-      channels: rankedFields(this.channels, request.query, request.limit),
-      programmes: rankedFields(this.programmes, request.query, request.limit),
-      movies: request.includeCatalog
-        ? rankedNames(this.movies, request.query, request.limit)
-        : emptyResult(),
-      series: request.includeCatalog
-        ? rankedNames(this.series, request.query, request.limit)
-        : emptyResult(),
+    const S = CONFIG.MNGTV.SEARCH;
+    const q = foldSearchText(request.query.trim());
+    const prev = S.NARROWING && this.narrow && this.narrow.sessionId === this.sessionId
+      && q.length > this.narrow.q.length && q.startsWith(this.narrow.q)
+      ? this.narrow
+      : null;
+    const fields = (key: 'channels' | 'programmes', index: PreparedSearchItem<number>[], skip: number): SearchRankedIndices =>
+      rankedFields(index, request.query, request.limit, {
+        fuzzyMinLength: S.FUZZY_MIN_LENGTH,
+        fuzzySkipField: skip,
+        candidates: prev?.[key] ?? null,
+        collectDirect: true,
+      }, key);
+    const names = (key: 'movies' | 'series', index: PreparedNameSearchIndex<number>): SearchRankedIndices => {
+      if (!request.includeCatalog) return emptyResult();
+      if (S.NAME_PREFIX_INDEX && !index.prefix && index.values.length) buildNamePrefixIndex(index);
+      return rankedNames(index, request.query, request.limit, {
+        candidates: prev?.[key] ?? null,
+        collectDirect: true,
+      }, key);
     };
+    const next: NonNullable<typeof this.narrow> = { sessionId: this.sessionId, q };
+    const response: SearchQueryResponse = {
+      channels: fields('channels', this.channels, -1),
+      programmes: fields('programmes', this.programmes, S.FUZZY_SKIP_PROGRAMME_FIELD),
+      movies: names('movies', this.movies),
+      series: names('series', this.series),
+    };
+    for (const key of ['channels', 'programmes', 'movies', 'series'] as const) {
+      const d = LAST_DIRECT[key];
+      if (d) next[key] = d;
+      delete LAST_DIRECT[key];
+    }
+    this.narrow = S.NARROWING ? next : null;
+    return response;
   }
 }
 
@@ -389,8 +432,11 @@ function rankedFields(
   index: PreparedSearchItem<number>[],
   query: string,
   limit: number,
+  options: RankOptions = {},
+  key?: 'channels' | 'programmes',
 ): SearchRankedIndices {
-  const result = rankPreparedTopK(index, query, limit);
+  const result = rankPreparedTopK(index, query, limit, options);
+  if (key) LAST_DIRECT[key] = result.direct;
   return { indices: result.items, hasMore: result.hasMore };
 }
 
@@ -398,13 +444,23 @@ function rankedNames(
   index: PreparedNameSearchIndex<number>,
   query: string,
   limit: number,
+  options: RankOptions = {},
+  key?: 'movies' | 'series',
 ): SearchRankedIndices {
-  const result = rankPreparedNamesTopK(index, query, limit);
+  const result = rankPreparedNamesTopK(index, query, limit, options);
+  if (key) LAST_DIRECT[key] = result.direct;
   return { indices: result.items, hasMore: result.hasMore };
 }
 
+// Son siralamanin dogrudan eslesme listeleri (modul duzeyinde; worker tek dizin tutar).
+const LAST_DIRECT: { channels?: number[]; programmes?: number[]; movies?: number[]; series?: number[] } = {};
+
 function emptyNames(): PreparedNameSearchIndex<number> {
   return { items: [], values: [] };
+}
+
+function supersededResult(): SearchQueryResponse {
+  return { superseded: true, channels: emptyResult(), programmes: emptyResult(), movies: emptyResult(), series: emptyResult() };
 }
 
 function emptyResult(): SearchRankedIndices {

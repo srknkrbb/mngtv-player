@@ -11,6 +11,14 @@ export const CONFIG = {
     STAY_ON_CHANNEL: true as boolean,
     ONLINE_SUBTITLES: false,
     RETRY_DELAY_MS: 3000,
+    SEARCH: {
+      DEBOUNCE_MS: 150,            // tus vuruslari arasinda bekleme; 0 = upstream (bir kare)
+      KEEP_RESULTS_WHILE_PENDING: true, // yeni cevap gelene kadar eski sonuclar ekranda kalir
+      FUZZY_MIN_LENGTH: 3,         // bulanik (yazim hatasi/es anlam) tarama bu uzunluktan kisa sorguda calismaz
+      FUZZY_SKIP_PROGRAMME_FIELD: 2, // program dizininde bulanik taramadan haric alan (2 = aciklama)
+      NARROWING: true,             // sorgu oncekini uzatiyorsa yalniz onceki eslesme kumesi taranir
+      NAME_PREFIX_INDEX: true,     // film/dizi adlari icin kelime-basi on-ek dizini
+    },
   },
 
   // Versioned channel customization record (order, display, grouping, and EPG overrides).
@@ -28,7 +36,7 @@ export const CONFIG = {
   SERVICE_HOST: '127.0.0.1',
 
   DEFAULT_PLAYLIST_REFRESH_INTERVAL_MS: 6 * 60 * 60 * 1000,
-  WORKER_IDLE_TERMINATION_MS: 1000,
+  WORKER_IDLE_TERMINATION_MS: 60_000, // mngtv: arama dizini bellekte kalsin (upstream 1000)
   PLAYLIST_CACHE_WRITE_DELAY_MS: 1200,
   DEFAULT_EPG_REFRESH_INTERVAL_MS: 6 * 60 * 60 * 1000,
   REMINDER_SCAN_INTERVAL: 30 * 1000,
@@ -143,7 +151,7 @@ export const CONFIG = {
     PREWARM_READ_TIMEOUT_MS: 10_000,
     // Latest the background index build waits for an idle period.
     PREWARM_IDLE_TIMEOUT_MS: 5000,
-    INITIAL_RESULTS: 200,       // first ranked results published per group
+    INITIAL_RESULTS: 80,        // first ranked results published per group (mngtv: 200 -> 80)
     EXPANSION_FACTOR: 5,        // grow retained results near a virtual window boundary
     RESULT_CAP: 50_000,         // final per-group cap after progressive expansion
     HISTORY_MAX_ENTRIES: 10,    // recent searches kept

@@ -107,11 +107,31 @@ export interface PreparedSearchItem<T> {
 export interface PreparedNameSearchIndex<T> {
   items: T[];
   values: string[];
+  // mngtv: kelime-basi on-ek dizini (tembel kurulur; bkz. buildNamePrefixIndex)
+  prefix?: NamePrefixIndex;
+}
+
+/** Her ad icin her kelime basindan baslayan sonek, sirali. Tier 0-2 eslesmeleri ikili aramayla bulunur. */
+export interface NamePrefixIndex {
+  suffixes: string[];   // sirali
+  owner: Int32Array;    // suffixes[i] -> item indeksi
+  pos: Int32Array;      // suffixes[i] -> ad icindeki konum
 }
 
 export interface RankedSearchResult<T> {
   items: T[];
   hasMore: boolean;
+  // mngtv: tum dogrudan (indexOf) eslesmelerin indeksleri; daraltarak arama icin
+  direct?: number[];
+}
+
+/** mngtv: siralama secenekleri. */
+export interface RankOptions {
+  includeFuzzy?: boolean;
+  fuzzyMinLength?: number;        // katlanmis sorgu bundan kisaysa bulanik tarama yapilmaz
+  fuzzySkipField?: number;        // bu alan bulanik taramaya girmez (orn. program aciklamasi)
+  candidates?: ArrayLike<number> | null; // yalniz bu indeksler taranir (daraltma)
+  collectDirect?: boolean;        // direct listesi dondurulur
 }
 
 interface ScoredSearchItem<T> {
@@ -197,11 +217,13 @@ function directScore<T>(
 function fuzzyScore<T>(
   prepared: PreparedSearchItem<T>,
   terms: string[],
+  skipField = -1,
 ): number | null {
   let total = 10000;
   for (const term of terms) {
     let best: number | null = null;
     for (let fieldIndex = 0; fieldIndex < prepared.values.length; fieldIndex++) {
+      if (fieldIndex === skipField) continue;
       const score = tokenScore(
         term,
         prepared.fieldTokens,
@@ -273,27 +295,38 @@ export function rankPreparedTopK<T>(
   items: PreparedSearchItem<T>[],
   query: string,
   limit: number,
-  includeFuzzy = true,
+  options: boolean | RankOptions = true,
 ): RankedSearchResult<T> {
+  const opts: RankOptions = typeof options === 'boolean' ? { includeFuzzy: options } : options;
   const q = fold(query.trim());
   const terms = queryTokens(query);
-  if (!q || !terms.length || limit <= 0) return { items: [], hasMore: false };
+  if (!q || !terms.length || limit <= 0) return { items: [], hasMore: false, direct: opts.collectDirect ? [] : undefined };
+  const includeFuzzy = (opts.includeFuzzy ?? true) && q.length >= (opts.fuzzyMinLength ?? 0);
   const heap = new BoundedHeap<ScoredSearchItem<T>>(limit, compareScored);
   const directMatches = includeFuzzy ? new Uint8Array(items.length) : null;
+  const direct: number[] | null = opts.collectDirect ? [] : null;
   let matches = 0;
-  for (let i = 0; i < items.length; i++) {
+  const scan = (i: number): void => {
     const prepared = items[i];
     const score = directScore(prepared, q);
-    if (score === null) continue;
+    if (score === null) return;
     if (directMatches) directMatches[i] = 1;
+    if (direct) direct.push(i);
     matches++;
     heap.add({ item: prepared.item, score, idx: i });
+  };
+  const candidates = opts.candidates;
+  if (candidates) {
+    for (let c = 0; c < candidates.length; c++) scan(candidates[c]);
+  } else {
+    for (let i = 0; i < items.length; i++) scan(i);
   }
   if (includeFuzzy && matches < limit) {
+    const skip = opts.fuzzySkipField ?? -1;
     for (let i = 0; i < items.length; i++) {
       const prepared = items[i];
       if (directMatches?.[i]) continue;
-      const score = fuzzyScore(prepared, terms);
+      const score = fuzzyScore(prepared, terms, skip);
       if (score === null) continue;
       matches++;
       heap.add({ item: prepared.item, score, idx: i });
@@ -303,39 +336,112 @@ export function rankPreparedTopK<T>(
     items: heap.sorted().map(value => value.item),
     hasMore: matches > limit
       || (includeFuzzy && matches >= limit && items.length > matches),
+    direct: direct ?? undefined,
   };
+}
+
+/** mngtv: adlarin her kelime basindan sonekleri, sirali. Bir kez kurulur, dizine asilir. */
+export function buildNamePrefixIndex<T>(index: PreparedNameSearchIndex<T>): NamePrefixIndex {
+  const suffixes: string[] = [];
+  const owners: number[] = [];
+  const positions: number[] = [];
+  for (let i = 0; i < index.values.length; i++) {
+    const value = index.values[i];
+    for (let p = 0; p < value.length; p++) {
+      if (!isLetterOrNumber(value[p]) || (p > 0 && isLetterOrNumber(value[p - 1]))) continue;
+      suffixes.push(p === 0 ? value : value.slice(p));
+      owners.push(i);
+      positions.push(p);
+    }
+  }
+  const order = suffixes.map((_, i) => i).sort((a, b) => (suffixes[a] < suffixes[b] ? -1 : suffixes[a] > suffixes[b] ? 1 : a - b));
+  const out: NamePrefixIndex = {
+    suffixes: order.map(i => suffixes[i]),
+    owner: Int32Array.from(order, i => owners[i]),
+    pos: Int32Array.from(order, i => positions[i]),
+  };
+  index.prefix = out;
+  return out;
+}
+
+function lowerBound(sorted: string[], q: string): number {
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (sorted[mid] < q) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }
 
 export function rankPreparedNamesTopK<T>(
   index: PreparedNameSearchIndex<T>,
   query: string,
   limit: number,
+  options: RankOptions = {},
 ): RankedSearchResult<T> {
   const q = fold(query.trim());
-  if (!q || limit <= 0) return { items: [], hasMore: false };
+  if (!q || limit <= 0) return { items: [], hasMore: false, direct: options.collectDirect ? [] : undefined };
   const heap = new BoundedHeap<ScoredNameItem<T>>(limit, compareNameScored);
+  const direct: number[] | null = options.collectDirect ? [] : null;
   let matches = 0;
-  for (let i = 0; i < index.items.length; i++) {
+  const scan = (i: number): void => {
     const value = index.values[i];
     const pos = value.indexOf(q);
-    if (pos === -1) continue;
+    if (pos === -1) return;
     const tier = value === q
       ? 0
       : pos === 0
         ? 1
         : !isLetterOrNumber(value[pos - 1]) ? 2 : 3;
     matches++;
-    heap.add({
-      item: index.items[i],
-      tier,
-      pos,
-      len: value.length,
-      idx: i,
-    });
+    if (direct) direct.push(i);
+    heap.add({ item: index.items[i], tier, pos, len: value.length, idx: i });
+  };
+  const candidates = options.candidates;
+  if (candidates) {
+    for (let c = 0; c < candidates.length; c++) scan(candidates[c]);
+  } else if (index.prefix) {
+    // On-ek dizini: tier 0-2 (tam / bastan / kelime basi) ikili aramayla; her ad bir kez.
+    const { suffixes, owner, pos } = index.prefix;
+    const seen = new Uint8Array(index.items.length);
+    for (let k = lowerBound(suffixes, q); k < suffixes.length && suffixes[k].startsWith(q); k++) {
+      const i = owner[k];
+      if (seen[i]) continue;
+      seen[i] = 1;
+      const value = index.values[i];
+      const p = pos[k];
+      // Ayni adda daha erken bir kelime-basi eslesmesi olabilir; indexOf en erkenini verir.
+      const first = value.indexOf(q);
+      const tier = value === q ? 0 : first === 0 ? 1 : !isLetterOrNumber(value[first - 1]) ? 2 : p === 0 ? 1 : 2;
+      matches++;
+      if (direct) direct.push(i);
+      heap.add({ item: index.items[i], tier, pos: first, len: value.length, idx: i });
+    }
+    if (matches < limit) {
+      // Kelime icinden gecen eslesmeler (tier 3): yalniz sonuc azsa tam tarama.
+      for (let i = 0; i < index.items.length; i++) {
+        if (seen[i]) continue;
+        const value = index.values[i];
+        const p = value.indexOf(q);
+        if (p === -1) continue;
+        matches++;
+        if (direct) direct.push(i);
+        heap.add({ item: index.items[i], tier: 3, pos: p, len: value.length, idx: i });
+      }
+    } else if (direct) {
+      // Liste tam olmayabilir (tier 3 taranmadi): daraltma icin kullanilamaz.
+      direct.length = 0;
+      return { items: heap.sorted().map(value => value.item), hasMore: true, direct: undefined };
+    }
+  } else {
+    for (let i = 0; i < index.items.length; i++) scan(i);
   }
   return {
     items: heap.sorted().map(value => value.item),
     hasMore: matches > limit,
+    direct: direct ?? undefined,
   };
 }
 

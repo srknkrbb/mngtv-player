@@ -225,6 +225,8 @@ export interface SearchRankedIndices {
 }
 
 export interface SearchQueryResponse {
+  // mngtv: kuyrukta beklerken daha yeni bir sorgu geldi; sonuc bos ve kullanilmaz.
+  superseded?: boolean;
   channels: SearchRankedIndices;
   programmes: SearchRankedIndices;
   movies: SearchRankedIndices;

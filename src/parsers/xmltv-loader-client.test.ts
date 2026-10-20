@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CONFIG } from '../config';
 import { fetchAndParseXMLTV } from './xmltv-loader';
 import { retainAppWorker, terminateAppWorker } from '../workers/app-worker-client';
 
@@ -130,7 +131,7 @@ describe('fetchAndParseXMLTV worker client', () => {
     await fetchAndParseXMLTV('http://host/a');
     expect(FakeWorker.terminations).toBe(0);
 
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(CONFIG.WORKER_IDLE_TERMINATION_MS);
 
     expect(FakeWorker.terminations).toBe(1);
   });
@@ -201,11 +202,11 @@ describe('fetchAndParseXMLTV worker client', () => {
 
     const release = retainAppWorker();
     await fetchAndParseXMLTV('http://host/a');
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(CONFIG.WORKER_IDLE_TERMINATION_MS);
     expect(FakeWorker.terminations).toBe(0);
 
     release();
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(CONFIG.WORKER_IDLE_TERMINATION_MS);
     expect(FakeWorker.terminations).toBe(1);
   });
 
