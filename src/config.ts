@@ -21,7 +21,7 @@ export const CONFIG = {
       NAME_PREFIX_INDEX: true,     // film/dizi adlari icin kelime-basi on-ek dizini
     },
     // Gunun Maclari gorunumu: bu desene uyan gruplardaki kanallar listelenir
-    MATCHES: { GROUP_RE: /GUNUN MACLARI|GÜNÜN MAÇLARI|TODAY'?S MATCHES/i, REFRESH_MS: 60_000, NAME_TZ_OFFSET_MIN: 180 },
+    MATCHES: { GROUP_RE: /GUNUN MACLARI|GÜNÜN MAÇLARI|TODAY'?S MATCHES/i, REFRESH_MS: 60_000, NAME_TZ_OFFSET_MIN: 180, START_VIEW: true },
     // Sunucu tetiklemeli yenileme: {xtream}/mngtv/version.json ozeti degisince liste+EPG yenilenir.
     SYNC: { ENABLED: true, POLL_MS: 60_000, TIMEOUT_MS: 8000, BACKOFF_MS: 60 * 60 * 1000 },
     // Oynatici olaylari {xtream}/mngtv/telemetry'ye (yayin sagligi ek sinyali). Sunucu vermiyorsa 1 sa sonra tekrar denenir.

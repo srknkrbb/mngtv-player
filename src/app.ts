@@ -971,8 +971,15 @@ class App {
         .filter((p) => p.source === 'xtream' && p.xtream && isSourceEnabled(p));
       this.tabBar.setAccounts(xtreamAccounts, this.activeXtreamAccount()?.id ?? '');
 
-      this.showView('channels');
       this.channelList.render();
+      if (CONFIG.MNGTV.MATCHES.START_VIEW && this.hasMatchGroup()) {
+        // mngtv: giris ekrani Maclar (liste mac grubu iceriyorsa)
+        this.tabBar.setActive('matches');
+        this.showView('matches');
+        this.matchesView.open();
+      } else {
+        this.showView('channels');
+      }
 
       showToast(tp('app.channelsLoaded', PlaylistService.channels.length));
       // Let the load confirmation finish before a new-category notice replaces it.
@@ -992,6 +999,7 @@ class App {
         if (last && ParentalControlService.decision(liveParentalRequest(last)).allowed) {
           log.info('Auto-play resuming last channel index', lastCh);
           this.playChannel(lastCh);
+          if (this.isCurrentView('player') && this.viewStack[0] === 'matches') this.playerReturnView = 'matches';
         }
       }
 
