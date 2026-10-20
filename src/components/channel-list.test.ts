@@ -43,7 +43,7 @@ const {
       applyCustomization: vi.fn(),
       setIncludeHidden: vi.fn(),
     },
-    epgMock: { findChannelId: () => null, getNowPlaying: () => null },
+    epgMock: { findChannelId: () => null, getNowPlaying: () => null, getUpcoming: () => [] },
     storageMock: {
       getFavorites: () => data.favorites,
       setFavorites: vi.fn((favorites: string[]) => {

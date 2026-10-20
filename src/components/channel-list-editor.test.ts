@@ -44,6 +44,7 @@ const { data, customization, playlistMock, epgMock, storageMock, recentMock, toa
       findChannelId: vi.fn(() => null as string | null),
       getSourceOffsetMinutes: vi.fn(() => 0),
       getNowPlaying: () => null,
+      getUpcoming: () => [],
       getLocalMappingCandidates: vi.fn(() => [] as Array<{
         id: string;
         channelId: string;

@@ -41,6 +41,7 @@ html.q-no-flex-gap .epg-mapping-option > * + * { margin-top: 3px; }
 }
 html.q-no-flex-gap .channel-edit-overlay-back > * + * { margin-left: 8px; }
 html.q-no-flex-gap .epg-offset-badge > * + * { margin-left: 5px; }
+html.q-no-flex-gap .channel-epg > * + * { margin-left: 12px; }
 html.q-no-flex-gap .live-preview-heading > * + * { margin-left: 20px; }
 html.q-no-flex-gap .live-preview-controls > * + * { margin-left: 8px; }
 html.q-no-flex-gap .live-preview-program > * + * { margin-left: 18px; }

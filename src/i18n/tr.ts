@@ -517,5 +517,5 @@ export const TR_MESSAGES = {
   'settings.matchTzServer': 'Türkiye saati',
   'settings.matchTzHint': 'Maçlar ekranındaki saatler. Kanal adlarındaki saat her zaman Türkiye saatidir.',
   'settings.hideGuide': 'Rehber sekmesini gizle',
-  'settings.hideGuideHint': 'Canlı\'da önizleme paneli (kanalda Sağ) o an ne var ve sıradaki programları gösterir; programda OK hatırlatıcı kurar.',
+  'settings.hideGuideHint': 'Her kanal satırında şu anki ve sıradaki programlar görünür. Kanalda Sağ ile sıradaki programa geçip OK ile hatırlatıcı kurabilirsiniz.',
 } as const satisfies MessageCatalog;

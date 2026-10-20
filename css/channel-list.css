@@ -866,3 +866,57 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+
+/* mngtv: satir ici mini rehber */
+.channel-item.has-row-epg .channel-info { flex: 0 0 340px; }
+.channel-epg {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-self: stretch;
+}
+.channel-epg-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  border-left: 1px solid var(--border);
+}
+.channel-epg-now { flex: 1.4; border-left: none; }
+.channel-epg-cell > * { flex-shrink: 0; }
+.channel-epg-time {
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+}
+.channel-epg-time svg { width: 16px; height: 16px; margin-left: 6px; color: var(--accent); }
+.channel-epg-title {
+  font-size: 18px;
+  line-height: 1.3;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.channel-epg-now .channel-epg-title { font-weight: 500; }
+.channel-epg-cell:not(.channel-epg-now) .channel-epg-title { color: var(--text-secondary); }
+.channel-epg-progress {
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.channel-epg-progress span { display: block; height: 100%; background: var(--accent); }
+.channel-epg-cell.epg-focused {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
+}
+.channel-epg-cell.epg-focused .channel-epg-title { color: var(--text-primary); }

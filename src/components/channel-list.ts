@@ -24,14 +24,16 @@ interface GroupEntry {
   /** mngtv: bolum basligi satiri (TURKIYE SPOR / DUNYA SPOR / TV KANALLARI); secilemez, odak almaz */
   header?: boolean;
 }
-import { formatPosition } from '../utils/time';
+import { formatPosition, formatTime } from '../utils/time';
+import { ReminderService } from '../services/reminder-service';
+import type { Programme } from '../types';
 import { PlaylistService } from '../services/playlist-service';
 import { EpgService } from '../services/epg-service';
 import { StorageService } from '../services/storage-service';
 import { RecentlyWatchedService, type RecentlyWatchedItem } from '../services/recently-watched';
 import { ChannelHealthService } from '../services/channel-health';
 import { groupIcon } from './group-icon';
-import { NAV_HORIZONTAL_ICON, favoriteIcon } from './icons';
+import { NAV_HORIZONTAL_ICON, bellIcon, favoriteIcon } from './icons';
 import { backKey, okHint } from './key-hints';
 import { channelLockBadge, liveGroupLockBadge } from './parental-badge';
 import { showToast } from './toast';
@@ -94,6 +96,9 @@ export class ChannelList {
   private playingCatchupStart: number | null = null;
   private recentItems: RecentlyWatchedItem[] = [];
   private failedLogos = new Set<string>();
+  /** mngtv: satir ici EPG'de odaklanan siradaki program (Sag ile girilir, OK hatirlatici). */
+  private epgCursor: { idx: number; slot: number } | null = null;
+
   private readonly channelVirtualizer = new VirtualList({
     itemSize: CHANNEL_ROW_STRIDE,
     overscan: CHANNEL_OVERSCAN,
@@ -610,6 +615,7 @@ export class ChannelList {
   }
 
   private dispatchAction(action: Action, event?: NumberEvent): boolean {
+    if (this.epgCursor && this.handleRowEpg(action)) return true;
     // Before the editor too: it applies these to whichever row holds focus.
     // Up also precedes the row-0 hand-off to the tab bar; Down would move a grabbed row.
     const resumeFirst = action === 'select' || action === 'left' || action === 'right'
@@ -641,6 +647,7 @@ export class ChannelList {
         return this.nav.move(action);
       case 'right':
         if (this.nav.focused?.closest('.channel-main') && this.onEnterPreview()) return true;
+        if (this.enterRowEpg()) return true;
         return this.nav.move(action);
 
       case 'channel_up':
@@ -982,6 +989,117 @@ export class ChannelList {
     return row?.dataset.key ?? null;
   }
 
+  private rowEpgEnabled(): boolean {
+    return CONFIG.MNGTV.ROW_EPG.ENABLED && !this.editor.isChannelEditing;
+  }
+
+  private rowUpcoming(ch: Channel): Programme[] {
+    const epgId = EpgService.findChannelId(ch);
+    return epgId ? EpgService.getUpcoming(epgId, CONFIG.MNGTV.ROW_EPG.NEXT_COUNT) : [];
+  }
+
+  /** Sag: odakli kanal satirinin siradaki programlarina gir (onizleme kapaliyken). */
+  private enterRowEpg(): boolean {
+    if (!this.rowEpgEnabled()) return false;
+    const focused = this.nav.focused;
+    if (!focused?.closest('.channel-main') || focused.dataset.channelIndex === undefined) return false;
+    const idx = parseInt(focused.dataset.channelIndex, 10);
+    const ch = PlaylistService.channels[idx];
+    if (!ch || !this.rowUpcoming(ch).length) return false;
+    this.epgCursor = { idx, slot: 0 };
+    this.render(false);
+    return true;
+  }
+
+  private handleRowEpg(action: Action): boolean {
+    const cur = this.epgCursor!;
+    const ch = PlaylistService.channels[cur.idx];
+    const focusedIdx = this.nav.focused?.dataset.channelIndex;
+    const upcoming = ch ? this.rowUpcoming(ch) : [];
+    if (!ch || focusedIdx !== String(cur.idx) || !upcoming.length) {
+      this.epgCursor = null;
+      return false;
+    }
+    switch (action) {
+      case 'right':
+        if (cur.slot < upcoming.length - 1) cur.slot++;
+        this.render(false);
+        return true;
+      case 'left':
+        if (cur.slot > 0) cur.slot--;
+        else this.epgCursor = null;
+        this.render(false);
+        return true;
+      case 'select': {
+        const item = upcoming[cur.slot];
+        if (item) this.toggleRowReminder(ch, item);
+        this.render(false);
+        return true;
+      }
+      case 'back':
+        this.epgCursor = null;
+        this.render(false);
+        return true;
+      default:
+        // Yukari/Asagi vb.: imleci birak, normal gezinme devam etsin.
+        this.epgCursor = null;
+        this.render(false);
+        return false;
+    }
+  }
+
+  private toggleRowReminder(ch: Channel, item: Programme): void {
+    const chKey = channelKey(ch);
+    const startMs = item.start.getTime();
+    if (ReminderService.has(chKey, startMs)) {
+      ReminderService.remove(chKey, startMs);
+      showToast(t('epg.reminderRemoved'));
+    } else {
+      ReminderService.add({
+        channelKey: chKey,
+        channelName: ch.name,
+        playlistIds: ch.playlistIds.slice(),
+        epgSourceUrl: EpgService.getSourceUrl(ch) ?? undefined,
+        title: item.title,
+        startMs,
+        stopMs: item.stop.getTime(),
+      });
+      showToast(t('epg.reminderSet'));
+    }
+  }
+
+  /** mngtv: satir ici mini rehber — su an (ilerleme cubugu) + siradaki programlar. */
+  private renderRowEpg(ch: Channel, globalIdx: number, nowPlaying: Programme | null): Safe | string {
+    if (!this.rowEpgEnabled()) return '';
+    const upcoming = this.rowUpcoming(ch);
+    if (!nowPlaying && !upcoming.length) return '';
+    const chKey = channelKey(ch);
+    const cursor = this.epgCursor?.idx === globalIdx
+      && this.nav.focused?.dataset.channelIndex === String(globalIdx) ? this.epgCursor.slot : -1;
+    const now = Date.now();
+    const pct = nowPlaying
+      ? Math.max(0, Math.min(100, ((now - nowPlaying.start.getTime())
+        / Math.max(1, nowPlaying.stop.getTime() - nowPlaying.start.getTime())) * 100))
+      : 0;
+    return html`
+      <div class="channel-epg">
+        ${nowPlaying ? html`
+          <div class="channel-epg-cell channel-epg-now">
+            <div class="channel-epg-time">${formatTime(nowPlaying.start)}–${formatTime(nowPlaying.stop)}</div>
+            <div class="channel-epg-title">${nowPlaying.title}</div>
+            <div class="channel-epg-progress"><span style="width:${pct.toFixed(1)}%"></span></div>
+          </div>` : html`<div class="channel-epg-cell channel-epg-now channel-epg-empty"></div>`}
+        ${upcoming.map((p, i) => {
+          const set = ReminderService.has(chKey, p.start.getTime());
+          return html`
+            <div class="channel-epg-cell ${i === cursor ? 'epg-focused' : ''} ${set ? 'reminder-set' : ''}">
+              <div class="channel-epg-time">${formatTime(p.start)}${set ? raw(bellIcon(true)) : ''}</div>
+              <div class="channel-epg-title">${p.title}</div>
+            </div>`;
+        })}
+      </div>`;
+  }
+
   private renderChannel(ch: Channel, favs: string[], position: number, top: number): Safe {
     const globalIdx = PlaylistService.indexOf(ch);
     const epgId = EpgService.findChannelId(ch);
@@ -996,7 +1114,8 @@ export class ChannelList {
 
     return html`
       <div class="channel-item ${isPlaying ? 'playing' : ''} ${hidden ? 'hidden-entry' : ''} ${
-        grabbed ? 'grabbed' : ''} ${selectedFavorite ? 'favorite-selected' : ''}"
+        grabbed ? 'grabbed' : ''} ${selectedFavorite ? 'favorite-selected' : ''} ${
+        this.rowEpgEnabled() ? 'has-row-epg' : ''}"
            data-key="ch:${String(globalIdx)}"
            data-focusable data-channel-index="${globalIdx}"
            data-list-position="${position}" style="top:${top}px">
@@ -1010,10 +1129,11 @@ export class ChannelList {
               }${ch.name}</div>`}
           ${this.editor.isChannelEditing && ch.sourceName
             ? html`<div class="channel-now channel-source-name">${ch.sourceName}</div>`
-            : (nowPlaying
+            : (nowPlaying && !this.rowEpgEnabled()
                 ? html`<div class="channel-now">${nowPlaying.title}</div>`
                 : '')}
         </div>
+        ${this.renderRowEpg(ch, globalIdx, nowPlaying)}
         ${this.editor.renderChannelEditStatus(ch)}
         ${this.renderHealth(ch)}
         ${isPlaying ? raw('<div class="playing-indicator">&#9654;</div>') : ''}

@@ -21,6 +21,11 @@ export const CONFIG = {
       NAME_PREFIX_INDEX: true,     // film/dizi adlari icin kelime-basi on-ek dizini
     },
     // Kenar cubugu: "Tumu" yok; gruplar TR spor / dunya spor / TV bolumleri, ulke kodlu etiketler; Gunun Maclari gruplari gizli
+    // Kanal satirinda mini rehber: su an + siradaki programlar; Sag ile programa gir, OK hatirlatici.
+    ROW_EPG: {
+      ENABLED: true as boolean,
+      NEXT_COUNT: 2,
+    },
     SIDEBAR: { ENABLED: true as boolean },
     // Gunun Maclari gorunumu: bu desene uyan gruplardaki kanallar listelenir
     // Maclar sekmesi yalniz futbol: "... GUNUN MACLARI" gruplari (DIGER = futbol disi, listelenmez)

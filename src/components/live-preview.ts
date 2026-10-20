@@ -151,6 +151,8 @@ export class LivePreview {
 
   focusControls(): boolean {
     if (this.options.channelList.isEditing) return false;
+    // mngtv: onizleme gorunmuyorsa (ayar kapali) Sag satir ici rehbere gitsin.
+    if (!this.isShowing || !StorageService.getLivePreview()) return false;
     return this.focus();
   }
 
