@@ -123,6 +123,7 @@ html.q-no-flex-gap .reminder-manager-empty > * + * { margin-top: 12px; }
 @supports not (display: grid) {
   html.q-no-flex-gap .matches-columns > * + * { margin-left: 22px; }
 }
+html.q-no-flex-gap .matches-toggle > * + * { margin-left: 12px; }
 html.q-no-flex-gap .matches-section-heading > * + * { margin-left: 12px; }
 html.q-no-flex-gap .matches-rows > * + * { margin-top: 8px; }
 html.q-no-flex-gap .matches-row > * + * { margin-left: 8px; }

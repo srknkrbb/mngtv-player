@@ -84,8 +84,12 @@ export function buildMatchRows(
       const off = CONFIG.MNGTV.MATCHES.NAME_TZ_OFFSET_MIN * 60000;
       const day = new Date(now + off);
       start = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), Number(m[1]), Number(m[2])) - off);
-      // Pencere simdi-3 sa ... +21 sa: 3 saatten eski bir saat ancak yarinin macidir
-      if (!epg.ended && start.getTime() < now - 3 * 3600 * 1000) start = new Date(start.getTime() + 86400000);
+      // Pencere simdi-6 sa ... +18 sa: biten mac gelecekte olamaz (dunun saati), 6 saatten eski saat yarinin macidir
+      if (epg.ended) {
+        if (start.getTime() > now) start = new Date(start.getTime() - 86400000);
+      } else if (start.getTime() < now - 6 * 3600 * 1000) {
+        start = new Date(start.getTime() + 86400000);
+      }
       end = new Date(start.getTime() + DEFAULT_DURATION_MS);
     }
     const status: MatchStatus = epg.ended
@@ -112,6 +116,7 @@ export class MatchesView {
   readonly focusScope: FocusScope;
   private timer: ReturnType<typeof setInterval> | null = null;
   private active = false;
+  private endedOpen = false;   // Bitenler sutunu varsayilan kapali; dugmeyle acilir
 
   constructor(
     private container: HTMLElement,
@@ -146,6 +151,7 @@ export class MatchesView {
 
   deactivate(): void {
     this.active = false;
+    this.endedOpen = false;
     if (this.timer !== null) clearInterval(this.timer);
     this.timer = null;
   }
@@ -196,10 +202,17 @@ export class MatchesView {
         </header>
         ${rows.length
           ? html`
-            <div class="matches-columns">
+            <div class="matches-columns ${this.endedOpen ? 'ended-open' : ''}">
               ${this.column('live', t('matches.now'), live, t('matches.noLive'), now)}
               ${this.column('upcoming', t('matches.upcoming'), upcoming, t('matches.noUpcoming'), now)}
-              ${this.column('ended', t('matches.ended'), ended, t('matches.noEnded'), now)}
+              ${this.endedOpen
+                ? this.column('ended', t('matches.ended'), ended, t('matches.noEnded'), now, true)
+                : html`
+                  <section class="matches-column matches-column-ended matches-column-collapsed" data-status="ended">
+                    <button class="matches-toggle" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
+                      <strong>${t('matches.ended')}</strong><span>${ended.length}</span>
+                    </button>
+                  </section>`}
             </div>`
           : html`
             <div class="matches-empty">
@@ -214,13 +227,17 @@ export class MatchesView {
     }
   }
 
-  private column(status: MatchStatus, label: string, rows: MatchRow[], emptyText: string, now: number) {
+  private column(status: MatchStatus, label: string, rows: MatchRow[], emptyText: string, now: number, closable = false) {
     return html`
       <section class="matches-column matches-column-${status}" data-status="${status}">
-        <div class="matches-section-heading">
-          <strong>${label}</strong>
-          <span>${rows.length}</span>
-        </div>
+        ${closable
+          ? html`<button class="matches-toggle matches-section-heading" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
+                   <strong>${label}</strong><span>${rows.length}</span><em>${t('common.close')}</em>
+                 </button>`
+          : html`<div class="matches-section-heading">
+                   <strong>${label}</strong>
+                   <span>${rows.length}</span>
+                 </div>`}
         <div class="matches-rows">
           ${rows.length ? rows.map(row => this.row(row, now)) : html`<p class="matches-column-empty">${emptyText}</p>`}
         </div>
@@ -268,6 +285,12 @@ export class MatchesView {
   }
 
   private activate(control: HTMLElement): void {
+    if (control.dataset.matchAction === 'toggle-ended') {
+      this.endedOpen = !this.endedOpen;
+      this.render();
+      this.nav.focus(this.container.querySelector<HTMLElement>('[data-key="ended-toggle"]'));
+      return;
+    }
     const index = Number(control.dataset.matchIndex);
     if (!Number.isFinite(index)) return;
     if (control.dataset.matchAction === 'reminder') {
