@@ -1766,7 +1766,7 @@ class App {
         if (action === 'left') {
           if (this.menu.visible) this.menu.hide();
           else if (this.sidebar.visible) this.sidebar.handleAction(action);
-          else this.sidebar.show();
+          else if (this.playerReturnView !== 'matches') this.sidebar.show();   // mngtv: mac izlerken kanal listesi acilmaz
         } else if (action === 'right') {
           if (this.sidebar.visible) this.sidebar.handleAction(action);
           else if (this.menu.visible) this.menu.hide();
@@ -1825,7 +1825,7 @@ class App {
 
       // Protect the full-width area beside and below the OSD too: its edge
       // controls sit next to margins where an imprecise cursor can open a panel.
-      if (!overOsd && !vod && !modal && e.clientX < 80 && !this.menu.visible) {
+      if (!overOsd && !vod && !modal && e.clientX < 80 && !this.menu.visible && this.playerReturnView !== 'matches') {
         this.sidebar.show();
         this.sidebar.handlePointerMove(e.clientX, false);
       } else if (this.sidebar.visible) {

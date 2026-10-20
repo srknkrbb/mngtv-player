@@ -43,7 +43,8 @@ describe('Gunun Maclari satirlari', () => {
 
   it('grup deseni', () => {
     expect(isMatchGroup('TURKIYE GUNUN MACLARI')).toBe(true);
-    expect(isMatchGroup('DUNYA GUNUN MACLARI DIGER')).toBe(true);
+    expect(isMatchGroup('DUNYA GUNUN MACLARI DIGER')).toBe(false);   // futbol disi: Maclar'da yok
+    expect(isMatchGroup('DUNYA GUNUN MACLARI')).toBe(true);
     expect(isMatchGroup('TURKIYE SPOR BEIN')).toBe(false);
   });
 });

@@ -45,7 +45,7 @@ function titleCase(s: string): string {
 /** null = kenar cubugunda gizli (Gunun Maclari, ayrac, arsiv). */
 export function presentGroup(name: string): GroupPresentation | null {
   const n = (name || '').trim();
-  if (!n || SEPARATOR.test(n) || CONFIG.MNGTV.MATCHES.GROUP_RE.test(n) || /^arsiv$/i.test(n)) return null;
+  if (!n || SEPARATOR.test(n) || CONFIG.MNGTV.MATCHES.HIDE_RE.test(n) || /^arsiv$/i.test(n)) return null;
   let m = TR_SPORT.exec(n);
   if (m) return { section: 'tr-sport', label: `TR | ${titleCase(m[1])}` };
   if (TR_TV.test(n)) return { section: 'tv', label: 'TR | TV' };

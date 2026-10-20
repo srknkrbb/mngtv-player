@@ -21,8 +21,8 @@ interface GroupEntry {
   id: ChannelGroupId;
   label: string;
   builtin?: BuiltinChannelGroup;
-  /** mngtv: bu satirla baslayan bolumun basligi (TURKIYE SPOR / DUNYA SPOR / TV KANALLARI) */
-  section?: string;
+  /** mngtv: bolum basligi satiri (TURKIYE SPOR / DUNYA SPOR / TV KANALLARI); secilemez, odak almaz */
+  header?: boolean;
 }
 import { formatPosition } from '../utils/time';
 import { PlaylistService } from '../services/playlist-service';
@@ -803,6 +803,13 @@ export class ChannelList {
     position: number,
     top: number,
   ): Safe {
+    if (g.header) {
+      return html`
+        <div class="group-item group-header" data-group-position="${position}" style="top:${top}px">
+          <span class="group-section">${g.label}</span>
+        </div>
+      `;
+    }
     const isSource = g.id.indexOf('source:') === 0;
     const key = isSource
       ? this.editor.groupKeyForDisplay(g.id.slice('source:'.length))
@@ -822,7 +829,7 @@ export class ChannelList {
         <span class="group-icon">${raw(groupIcon(g.label, g.builtin))}</span>
         ${renaming
           ? html`<input class="edit-text-input" type="text" value="${this.editor.renameValue(g.label)}">`
-          : html`<span class="group-name">${g.section ? html`<span class="group-section">${g.section}</span>` : ''}${
+          : html`<span class="group-name">${
               raw(liveGroupLockBadge(g.id, this.currentPlaylist))}${g.label}</span>`}
         <span class="group-count">${count}</span>
       </div>
@@ -1203,8 +1210,9 @@ export class ChannelList {
     const focused = this.nav.focused;
     const rawGroupPosition = focused?.dataset.groupPosition;
     if (rawGroupPosition !== undefined) {
-      const next = parseInt(rawGroupPosition, 10) + delta;
+      let next = parseInt(rawGroupPosition, 10) + delta;
       const groups = this.getGroupEntries();
+      while (next >= 0 && next < groups.length && groups[next].header) next += delta;   // mngtv: bolum basligi atlanir
       if (next < 0 || next >= groups.length) return false;
       const selector = `[data-group-position="${String(next)}"]`;
       const renderedTarget = this.container.querySelector<HTMLElement>(selector);
@@ -1249,7 +1257,7 @@ export class ChannelList {
   /** mngtv: "Tumu" gizliyken varsayilan grup ilk kaynak grubu (favoriler bos olabilir). */
   private defaultGroup(): ChannelGroupId {
     if (!CONFIG.MNGTV.SIDEBAR.ENABLED) return 'builtin:all';
-    const first = this.getGroupEntries().find(g => !g.builtin);
+    const first = this.getGroupEntries().find(g => !g.builtin && !g.header);
     return first ? first.id : 'builtin:favorites';
   }
 
@@ -1275,14 +1283,14 @@ export class ChannelList {
     ];
     if (CONFIG.MNGTV.SIDEBAR.ENABLED) {
       // mngtv: "Tumu" yok; gruplar TURKIYE SPOR / DUNYA SPOR / TV KANALLARI bolumleriyle, ulke kodlu etiketlerle
-      this.groupEntries = [
-        ...builtins,
-        ...orderGroups(names).map(r => ({
-          id: `source:${r.name}` as ChannelGroupId,
-          label: r.present.label,
-          section: r.sectionStart ? t(sectionTitleKey(r.present.section)) : undefined,
-        })),
-      ];
+      const entries: GroupEntry[] = [...builtins];
+      for (const r of orderGroups(names)) {
+        if (r.sectionStart) {
+          entries.push({ id: `source:__mngtv_header__:${r.present.section}` as ChannelGroupId, label: t(sectionTitleKey(r.present.section)), header: true });
+        }
+        entries.push({ id: `source:${r.name}` as ChannelGroupId, label: r.present.label });
+      }
+      this.groupEntries = entries;
     } else {
       this.groupEntries = [
         { id: 'builtin:all', label: t('common.all'), builtin: 'all' },

@@ -23,7 +23,8 @@ export const CONFIG = {
     // Kenar cubugu: "Tumu" yok; gruplar TR spor / dunya spor / TV bolumleri, ulke kodlu etiketler; Gunun Maclari gruplari gizli
     SIDEBAR: { ENABLED: true as boolean },
     // Gunun Maclari gorunumu: bu desene uyan gruplardaki kanallar listelenir
-    MATCHES: { GROUP_RE: /GUNUN MACLARI|GÜNÜN MAÇLARI|TODAY'?S MATCHES/i, REFRESH_MS: 60_000, NAME_TZ_OFFSET_MIN: 180, START_VIEW: true },
+    // Maclar sekmesi yalniz futbol: "... GUNUN MACLARI" gruplari (DIGER = futbol disi, listelenmez)
+    MATCHES: { GROUP_RE: /(GUNUN MACLARI|GÜNÜN MAÇLARI|TODAY'?S MATCHES)$/i, HIDE_RE: /GUNUN MACLARI|GÜNÜN MAÇLARI|TODAY'?S MATCHES/i, REFRESH_MS: 60_000, NAME_TZ_OFFSET_MIN: 180, START_VIEW: true },
     // Sunucu tetiklemeli yenileme: {xtream}/mngtv/version.json ozeti degisince liste+EPG yenilenir.
     SYNC: { ENABLED: true, POLL_MS: 60_000, TIMEOUT_MS: 8000, BACKOFF_MS: 60 * 60 * 1000 },
     // Oynatici olaylari {xtream}/mngtv/telemetry'ye (yayin sagligi ek sinyali). Sunucu vermiyorsa 1 sa sonra tekrar denenir.

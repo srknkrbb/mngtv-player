@@ -10,7 +10,7 @@ import { PlaylistService } from '../services/playlist-service';
 import { EpgService } from '../services/epg-service';
 import { ReminderService } from '../services/reminder-service';
 import { channelKey } from '../utils/channel';
-import { html, raw } from '../utils/dom';
+import { html, raw, type Safe } from '../utils/dom';
 import { morph } from '../utils/morph';
 import { t } from '../i18n';
 import { liveBadge } from './live-badge';
@@ -213,21 +213,13 @@ export class MatchesView {
     const ended = rows.filter(r => r.status === 'ended');
     morph(this.container, html`
       <div class="matches-view">
-        <header class="matches-hero">
-          <p class="matches-summary">${rows.length ? t('matches.summary', { count: rows.length, live: live.length }) : t('matches.title')}</p>
-          ${rows.length
-            ? html`<button class="matches-toggle ${this.endedOpen ? 'open' : ''}" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
-                     <strong>${t('matches.ended')}</strong><span>${ended.length}</span>
-                     ${this.endedOpen ? html`<em>${t('common.close')}</em>` : ''}
-                   </button>`
-            : ''}
-        </header>
         ${rows.length
           ? html`
             <div class="matches-columns ${this.endedOpen ? 'ended-open' : ''}">
               ${this.column('live', t('matches.now'), live, t('matches.noLive'), now)}
-              ${this.column('upcoming', t('matches.upcoming'), upcoming, t('matches.noUpcoming'), now)}
-              ${this.endedOpen ? this.column('ended', t('matches.ended'), ended, t('matches.noEnded'), now) : ''}
+              ${this.column('upcoming', t('matches.upcoming'), upcoming, t('matches.noUpcoming'), now,
+                this.endedOpen ? '' : this.toggle(ended.length))}
+              ${this.endedOpen ? this.column('ended', t('matches.ended'), ended, t('matches.noEnded'), now, this.toggle(ended.length)) : ''}
             </div>`
           : html`
             <div class="matches-empty">
@@ -242,12 +234,20 @@ export class MatchesView {
     }
   }
 
-  private column(status: MatchStatus, label: string, rows: MatchRow[], emptyText: string, now: number) {
+  /** Bitenler dugmesi: kapaliyken Yaklasan basliginin sagina, acikken Bitenler basligina (Kapat). */
+  private toggle(count: number) {
+    return html`<button class="matches-toggle ${this.endedOpen ? 'open' : ''}" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
+                  <strong>${this.endedOpen ? t('common.close') : t('matches.ended')}</strong>${this.endedOpen ? '' : html`<span>${count}</span>`}
+                </button>`;
+  }
+
+  private column(status: MatchStatus, label: string, rows: MatchRow[], emptyText: string, now: number, extra: Safe | string = '') {
     return html`
       <section class="matches-column matches-column-${status}" data-status="${status}">
         <div class="matches-section-heading">
           <strong>${label}</strong>
           <span>${rows.length}</span>
+          ${extra}
         </div>
         <div class="matches-rows">
           ${rows.length ? rows.map(row => this.row(row, now)) : html`<p class="matches-column-empty">${emptyText}</p>`}

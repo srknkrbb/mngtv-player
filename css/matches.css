@@ -47,7 +47,7 @@
 .matches-columns {
   display: grid;
   max-width: 1760px;
-  height: calc(100% - 60px);
+  height: 100%;
   grid-template-columns: 1fr 1.2fr;
   gap: 22px;
   margin: 0 auto;
@@ -60,7 +60,8 @@
   flex: 0 0 auto;
   align-items: baseline;
   gap: 10px;
-  padding: 6px 14px;
+  margin-left: auto;
+  padding: 4px 12px;
   color: #6b5a1e;
   font: inherit;
   font-size: 18px;
@@ -93,7 +94,7 @@
 
 .matches-section-heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
   margin-bottom: 10px;
   padding-bottom: 8px;

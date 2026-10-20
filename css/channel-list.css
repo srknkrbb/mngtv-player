@@ -850,13 +850,19 @@
   stroke-linejoin: round;
 }
 
-/* mngtv: bolum basligi (TURKIYE SPOR / DUNYA SPOR / TV KANALLARI) bolumun ilk grubunun ustunde */
-.group-name { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
+/* mngtv: bolum basligi satiri (TURKIYE SPOR / DUNYA SPOR / TV KANALLARI) - menu ogesi boyunda, secilemez */
+.group-header {
+  cursor: default;
+  align-items: flex-end;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent-dim);
+  border-radius: 0;
+}
+
 .group-section {
-  margin-bottom: 2px;
   color: var(--accent);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
