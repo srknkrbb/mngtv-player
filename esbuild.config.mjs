@@ -40,9 +40,24 @@ function transformStylesheets(outDir) {
 mkdirSync('dist', { recursive: true });
 const indexHtml = readFileSync('index.html', 'utf8');
 const previewLibsMarker = '<!-- preview-libs -->';
+// Desktop preview only: scale the fixed 1920x1080 stage to the browser window.
+const PREVIEW_FIT_SCRIPT = `<script>
+(function () {
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    document.body.style.transformOrigin = '0 0';
+    document.body.style.transform = 'scale(' + s + ')';
+    document.documentElement.style.background = '#000';
+    document.documentElement.style.width = '100%';
+    document.documentElement.style.height = '100%';
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('DOMContentLoaded', fit);
+})();
+</script>`;
 const outputIndexHtml = indexHtml.replace(
   previewLibsMarker,
-  isPreview ? '<script src="js/preview-libs.js"></script>' : '',
+  isPreview ? '<script src="js/preview-libs.js"></script>' + PREVIEW_FIT_SCRIPT : '',
 );
 if (outputIndexHtml === indexHtml) {
   throw new Error('Build could not find the preview library marker in index.html.');
