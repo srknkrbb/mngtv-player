@@ -83,13 +83,15 @@ interface ProgramResult {
 }
 
 function programDocument(result: ProgramResult): string[] {
-  return [
-    result.programme.title,
-    result.programme.category,
-    result.programme.description,
-    result.channel.name,
-    result.channel.group,
-  ];
+  return CONFIG.MNGTV.SEARCH.INDEX_PROGRAMME_DESCRIPTION
+    ? [
+      result.programme.title,
+      result.programme.category,
+      result.programme.description,
+      result.channel.name,
+      result.channel.group,
+    ]
+    : [result.programme.title, result.programme.category, result.channel.name, result.channel.group];
 }
 
 type CatalogLoadResult<T> =

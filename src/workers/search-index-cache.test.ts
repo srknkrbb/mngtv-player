@@ -131,13 +131,9 @@ function programmeDocuments(channels: Channel[], ids: Array<string | null>): str
   channels.forEach((item, index) => {
     const id = ids[index];
     for (const programme of id ? programmes[id] ?? [] : []) {
-      documents.push([
-        programme.title,
-        programme.category,
-        programme.description,
-        item.name,
-        item.group,
-      ]);
+      documents.push(CONFIG.MNGTV.SEARCH.INDEX_PROGRAMME_DESCRIPTION
+        ? [programme.title, programme.category, programme.description, item.name, item.group]
+        : [programme.title, programme.category, item.name, item.group]);
     }
   });
   return documents;
@@ -285,7 +281,8 @@ describe('SearchWorkerIndex with cached documents', () => {
       `read:${second.url}`,
       `extract:${second.url}`,
     ]);
-    expect((await index.query(query(1, 'bravo')))?.programmes.indices).toEqual([2]);
+    // mngtv: aciklama dizine girmez; 'bravo' yalniz aciklamada, 'feature' baslikta.
+    expect((await index.query(query(1, 'feature')))?.programmes.indices).toEqual([2]);
   });
 
   it('gives up on the cache once the read budget is spent', async () => {

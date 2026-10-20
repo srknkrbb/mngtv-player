@@ -1,3 +1,4 @@
+import { CONFIG } from '../config';
 import { foldSearchText } from '../utils/channel-search';
 import { SearchCacheError } from './search-cache-reader';
 import { sourceIndexValue, type SourceIndex } from './search-source-index';
@@ -144,13 +145,20 @@ export function cachedProgrammeRuns(
     const documents: string[][] = new Array(count);
     for (let i = 0; i < count; i++) {
       const item = first + i;
-      documents[i] = [
-        sourceIndexValue(index, item, 0),
-        sourceIndexValue(index, item, 1),
-        sourceIndexValue(index, item, 2),
-        channel[0],
-        channel[1],
-      ];
+      documents[i] = CONFIG.MNGTV.SEARCH.INDEX_PROGRAMME_DESCRIPTION
+        ? [
+          sourceIndexValue(index, item, 0),
+          sourceIndexValue(index, item, 1),
+          sourceIndexValue(index, item, 2),
+          channel[0],
+          channel[1],
+        ]
+        : [
+          sourceIndexValue(index, item, 0),
+          sourceIndexValue(index, item, 1),
+          channel[0],
+          channel[1],
+        ];
     }
     runs[run] = documents;
   }

@@ -1,3 +1,4 @@
+import { CONFIG } from '../config';
 import {
   cacheRecordTimestamp,
   CATALOG_STORE,
@@ -36,7 +37,7 @@ type Fields = Record<string, unknown>;
 
 const FIELDS: Record<SearchCacheRecord['store'], number> = {
   [PLAYLIST_STORE]: 2,
-  [EPG_STORE]: 3,
+  [EPG_STORE]: CONFIG.MNGTV.SEARCH.INDEX_PROGRAMME_DESCRIPTION ? 3 : 2,
   [CATALOG_STORE]: 1,
 };
 
@@ -93,8 +94,8 @@ export function buildSourceIndex(ref: SearchCacheRecord, raw: CachedRecord | nul
         values.push(
           foldSearchText(text(programme.title)),
           foldSearchText(text(programme.category)),
-          foldSearchText(text(programme.description)),
         );
+        if (CONFIG.MNGTV.SEARCH.INDEX_PROGRAMME_DESCRIPTION) values.push(foldSearchText(text(programme.description)));
       }
       runIds.push(id);
       runCounts.push(list.length);

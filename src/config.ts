@@ -15,7 +15,8 @@ export const CONFIG = {
       DEBOUNCE_MS: 150,            // tus vuruslari arasinda bekleme; 0 = upstream (bir kare)
       KEEP_RESULTS_WHILE_PENDING: true, // yeni cevap gelene kadar eski sonuclar ekranda kalir
       FUZZY_MIN_LENGTH: 3,         // bulanik (yazim hatasi/es anlam) tarama bu uzunluktan kisa sorguda calismaz
-      FUZZY_SKIP_PROGRAMME_FIELD: 2, // program dizininde bulanik taramadan haric alan (2 = aciklama)
+      FUZZY_SKIP_PROGRAMME_FIELD: -1, // program dizininde bulanik taramadan haric alan (-1 = yok)
+      INDEX_PROGRAMME_DESCRIPTION: false, // program aciklamasi dizine girmez (dizin ~3x kucuk; baslik/kategori/kanal aranir)
       NARROWING: true,             // sorgu oncekini uzatiyorsa yalniz onceki eslesme kumesi taranir
       NAME_PREFIX_INDEX: true,     // film/dizi adlari icin kelime-basi on-ek dizini
     },
