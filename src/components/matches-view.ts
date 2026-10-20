@@ -4,6 +4,9 @@
 // dilimindedir (uygulamanin EPG saat dilimi ayarindan bagimsiz). Secim = kanali oynat.
 import type { Action, Channel, Programme } from '../types';
 import { CONFIG } from '../config';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('matches');
 import { SpatialNav } from '../navigation/spatial-nav';
 import { Focus, type FocusScope } from '../navigation/focus-scope';
 import { PlaylistService } from '../services/playlist-service';
@@ -174,7 +177,10 @@ export class MatchesView {
     this.active = true;
     this.render();
     this.focusFirst();
-    if (this.timer === null) this.timer = setInterval(() => { if (this.active) this.render(); }, CONFIG.MNGTV.MATCHES.REFRESH_MS);
+    if (this.timer === null) {
+      this.timer = setInterval(() => { if (this.active) this.render(); }, CONFIG.MNGTV.MATCHES.REFRESH_MS);
+      document.addEventListener('visibilitychange', this.onVisible);
+    }
   }
 
   deactivate(): void {
@@ -182,9 +188,13 @@ export class MatchesView {
     this.endedOpen = false;
     if (this.timer !== null) clearInterval(this.timer);
     this.timer = null;
+    document.removeEventListener('visibilitychange', this.onVisible);
   }
 
   /** Liste/EPG yenilenince (gorunum acikken) yeniden ciz. */
+  /** mngtv: sekme/pencere geri gorunur olunca bekletmeden guncelle (arka planda zamanlayicilar kisilir). */
+  private readonly onVisible = (): void => { if (this.active && !document.hidden) this.render(); };
+
   refresh(): void {
     if (this.active) this.render();
   }
@@ -216,6 +226,11 @@ export class MatchesView {
   }
 
   private render(): void {
+    // Bir satirdaki beklenmedik veri tum ekrani eski halinde dondurmesin (her dakika yeniden denenir).
+    try { this.renderRows(); } catch (err) { log.error('Matches render failed', err); }
+  }
+
+  private renderRows(): void {
     const focusedKey = this.nav.focused?.dataset.key ?? null;
     const now = Date.now();
     const rows = this.rows(now);
