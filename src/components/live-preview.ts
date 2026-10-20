@@ -1,6 +1,8 @@
 import { CONFIG } from '../config';
 import { t } from '../i18n';
 import { EpgService } from '../services/epg-service';
+import { ReminderService } from '../services/reminder-service';
+import { bellIcon } from './icons';
 import { PlaylistService } from '../services/playlist-service';
 import { StorageService } from '../services/storage-service';
 import type {
@@ -48,7 +50,8 @@ export interface LivePreviewOptions {
   toggleFavorite: (channel: Channel) => void;
 }
 
-type PreviewControl = 'favorite' | 'mute' | 'fullscreen';
+// mngtv: 'program:<n>' = yaklasan program satiri (OK = hatirlatici ac/kapat)
+type PreviewControl = 'favorite' | 'mute' | 'fullscreen' | `program:${number}`;
 
 export class LivePreview {
   private state: LivePlaybackSnapshot | null = null;
@@ -286,8 +289,18 @@ export class LivePreview {
       this.leaveControls(true);
     } else if (action === 'left' && this.control === 'fullscreen') {
       this.focus('mute');
+    } else if (action === 'left' && this.control?.startsWith('program:')) {
+      this.leaveControls(true);
     } else if (action === 'right' && this.control === 'mute') {
       this.focus('fullscreen');
+    } else if (action === 'down' && (this.control === 'mute' || this.control === 'fullscreen') && this.upcomingCount() > 0) {
+      this.focus('program:0');                                    // mngtv: yaklasan programlara in
+    } else if (action === 'down' && this.control?.startsWith('program:')) {
+      const i = Number(this.control.slice('program:'.length));
+      if (i + 1 < this.upcomingCount()) this.focus(`program:${i + 1}`);
+    } else if (action === 'up' && this.control?.startsWith('program:')) {
+      const i = Number(this.control.slice('program:'.length));
+      this.focus(i > 0 ? `program:${i - 1}` : 'fullscreen');
     } else if (action === 'up' && this.control !== 'favorite') {
       this.focus('favorite');
     } else if (action === 'down' && this.control === 'favorite') {
@@ -295,6 +308,7 @@ export class LivePreview {
     } else if (action === 'select') {
       if (this.control === 'favorite') this.toggleFavorite();
       else if (this.control === 'mute') this.options.player.togglePreviewMute();
+      else if (this.control?.startsWith('program:')) this.toggleProgramReminder(Number(this.control.slice('program:'.length)));
       else this.expand();
     } else if (action === 'green') {
       this.toggleFavorite();
@@ -369,21 +383,57 @@ export class LivePreview {
   private renderUpcoming(upcoming: Programme[], now: Date): Safe {
     let previousDay = displayDayKey(now);
     const tomorrow = displayDayKey(addDisplayDays(now, 1));
-    return html`${upcoming.map(item => {
+    const chKey = this.state ? channelKey(this.state.channel) : '';
+    return html`${upcoming.map((item, index) => {
       const day = displayDayKey(item.start);
       const showDay = day !== previousDay;
       previousDay = day;
       const label = formatDayLabel(item.start);
+      const focused = this.control === `program:${index}`;
+      const set = !!chKey && ReminderService.has(chKey, item.start.getTime());
       return html`
         ${showDay ? html`
           <div class="live-preview-day-separator" data-key="day:${day}">
             <span>${day === tomorrow ? t('common.tomorrow') : label.weekday}, ${label.date}</span>
           </div>` : ''}
-        <div class="live-preview-program"
-             data-key="program:${item.start.getTime()}:${item.stop.getTime()}">
+        <div class="live-preview-program ${focused ? 'focused' : ''} ${set ? 'reminder-set' : ''}"
+             data-key="program:${item.start.getTime()}:${item.stop.getTime()}" data-program-index="${index}">
           <time>${this.programTimeRange(item)}</time><span>${item.title}</span>
+          <span class="live-preview-bell">${raw(bellIcon(set))}</span>
         </div>`;
     })}`;
+  }
+
+  /** mngtv: odaklanilan yaklasan program icin hatirlaticiyi ac/kapat (Rehber ile ayni mekanizma). */
+  private toggleProgramReminder(index: number): void {
+    if (!this.state) return;
+    const epgId = EpgService.findChannelId(this.state.channel);
+    const item = epgId ? EpgService.getUpcoming(epgId, CONFIG.PLAYER.LIVE_PREVIEW_UPCOMING_COUNT)[index] : undefined;
+    if (!item) return;
+    const chKey = channelKey(this.state.channel);
+    const startMs = item.start.getTime();
+    if (ReminderService.has(chKey, startMs)) {
+      ReminderService.remove(chKey, startMs);
+      showToast(t('epg.reminderRemoved'));
+    } else {
+      ReminderService.add({
+        channelKey: chKey,
+        channelName: this.state.channel.name,
+        playlistIds: this.state.channel.playlistIds.slice(),
+        epgSourceUrl: EpgService.getSourceUrl(this.state.channel) ?? undefined,
+        title: item.title,
+        startMs,
+        stopMs: item.stop.getTime(),
+      });
+      showToast(t('epg.reminderSet'));
+    }
+    this.render();
+  }
+
+  private upcomingCount(): number {
+    if (!this.state) return 0;
+    const epgId = EpgService.findChannelId(this.state.channel);
+    return epgId ? EpgService.getUpcoming(epgId, CONFIG.PLAYER.LIVE_PREVIEW_UPCOMING_COUNT).length : 0;
   }
 
   private render(): void {

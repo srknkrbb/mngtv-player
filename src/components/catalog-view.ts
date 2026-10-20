@@ -921,7 +921,8 @@ export abstract class CatalogView<C extends { id: string; name: string }, I> {
 
   protected posterCell(name: string, poster: string): Safe {
     return poster
-      ? html`<img class="catalog-poster" src="${poster}" alt="" loading="lazy" onerror="this.style.display='none'">`
+      // mngtv: kirik/eksik afis -> resmi gizleyip bas harfli yer tutucuyu goster (bos kutu kalmasin)
+      ? html`<div class="catalog-poster catalog-poster-empty catalog-poster-fallback">${name.charAt(0)}</div><img class="catalog-poster" src="${poster}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : html`<div class="catalog-poster catalog-poster-empty">${name.charAt(0)}</div>`;
   }
 

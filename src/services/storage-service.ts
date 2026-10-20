@@ -1010,6 +1010,21 @@ export const StorageService = {
   // 'global' = channel_up/channel_down cycles the entire channel list
   // (default, matches pre-scoping behavior), 'active' = stays within the
   // group/playlist/Favorites a channel was tuned from.
+  // mngtv: Maclar saat dilimi ('device' = TV'nin saati, 'server' = sunucu/Turkiye saati)
+  getMatchTz(): 'device' | 'server' {
+    return get<string>('mngtv_match_tz', 'device') === 'server' ? 'server' : 'device';
+  },
+  setMatchTz(mode: 'device' | 'server'): void {
+    set('mngtv_match_tz', mode);
+  },
+  // mngtv: Rehber sekmesi gizli (kanal listesindeki onizleme paneli program + hatirlatici verir)
+  getHideGuide(): boolean {
+    return get<boolean>('mngtv_hide_guide', false) === true;
+  },
+  setHideGuide(hide: boolean): void {
+    set('mngtv_hide_guide', hide);
+  },
+
   getChannelCycleMode(): ChannelCycleMode {
     return get<ChannelCycleMode>('channel_cycle_mode', 'global');
   },

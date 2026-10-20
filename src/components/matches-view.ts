@@ -9,6 +9,7 @@ import { Focus, type FocusScope } from '../navigation/focus-scope';
 import { PlaylistService } from '../services/playlist-service';
 import { EpgService } from '../services/epg-service';
 import { ReminderService } from '../services/reminder-service';
+import { StorageService } from '../services/storage-service';
 import { channelKey } from '../utils/channel';
 import { html, raw, type Safe } from '../utils/dom';
 import { morph } from '../utils/morph';
@@ -55,12 +56,22 @@ export function isMatchGroup(group: string): boolean {
   return CONFIG.MNGTV.MATCHES.GROUP_RE.test(group || '');
 }
 
-/** Cihazin saat diliminde HH:MM (EPG saat dilimi ayarindan bagimsiz). */
-export function localTime(date: Date): string {
+/** Ayara gore HH:MM: cihazin saati ya da sunucu (Turkiye, +03:00) saati. */
+export function localTime(date: Date, mode: 'device' | 'server' = StorageService.getMatchTz()): string {
+  if (mode === 'server') {
+    const s = new Date(date.getTime() + CONFIG.MNGTV.MATCHES.NAME_TZ_OFFSET_MIN * 60000);
+    return `${String(s.getUTCHours()).padStart(2, '0')}:${String(s.getUTCMinutes()).padStart(2, '0')}`;
+  }
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-function sameLocalDay(a: Date, b: Date): boolean {
+function sameLocalDay(a: Date, b: Date, mode: 'device' | 'server' = StorageService.getMatchTz()): boolean {
+  if (mode === 'server') {
+    const off = CONFIG.MNGTV.MATCHES.NAME_TZ_OFFSET_MIN * 60000;
+    const x = new Date(a.getTime() + off);
+    const y = new Date(b.getTime() + off);
+    return x.getUTCFullYear() === y.getUTCFullYear() && x.getUTCMonth() === y.getUTCMonth() && x.getUTCDate() === y.getUTCDate();
+  }
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 

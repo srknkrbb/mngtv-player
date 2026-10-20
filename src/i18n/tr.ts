@@ -512,4 +512,10 @@ export const TR_MESSAGES = {
   'channel.sectionTrSport': 'TÜRKİYE SPOR',
   'channel.sectionWorldSport': 'DÜNYA SPOR',
   'channel.sectionTv': 'TV KANALLARI',
+  'settings.matchTz': 'Maç saatleri',
+  'settings.matchTzDevice': 'Bu TV\'nin saati',
+  'settings.matchTzServer': 'Türkiye saati',
+  'settings.matchTzHint': 'Maçlar ekranındaki saatler. Kanal adlarındaki saat her zaman Türkiye saatidir.',
+  'settings.hideGuide': 'Rehber sekmesini gizle',
+  'settings.hideGuideHint': 'Canlı\'da önizleme paneli (kanalda Sağ) o an ne var ve sıradaki programları gösterir; programda OK hatırlatıcı kurar.',
 } as const satisfies MessageCatalog;

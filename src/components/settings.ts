@@ -704,6 +704,8 @@ export class Settings {
     const autoPlay = StorageService.getAutoPlay();
     const livePreview = StorageService.getLivePreview();
     const channelCycleMode = StorageService.getChannelCycleMode();
+    const matchTz = StorageService.getMatchTz();
+    const hideGuide = StorageService.getHideGuide();
     const showHidden = StorageService.getShowHiddenChannels();
     const feedTime = StorageService.getTzMode() === 'feed';
     const tzOffset = StorageService.getEpgTzOffset();
@@ -959,6 +961,19 @@ export class Settings {
                     { value: 'active', label: t('settings.channelCycleActive') },
                   ], channelCycleMode)}
                   <div class="settings-item-hint">${t('settings.channelCycleModeHint')}</div>
+                </div>
+                <div class="settings-item">
+                  <div class="settings-item-title">${t('settings.matchTz')}</div>
+                  ${toggleGroup('match-tz', [
+                    { value: 'device', label: t('settings.matchTzDevice') },
+                    { value: 'server', label: t('settings.matchTzServer') },
+                  ], matchTz)}
+                  <div class="settings-item-hint">${t('settings.matchTzHint')}</div>
+                </div>
+                <div class="settings-item">
+                  <div class="settings-item-title">${t('settings.hideGuide')}</div>
+                  ${toggleGroup('hide-guide', [{ value: 'on', label: t('settings.on') }, { value: 'off', label: t('settings.off') }], hideGuide ? 'on' : 'off')}
+                  <div class="settings-item-hint">${t('settings.hideGuideHint')}</div>
                 </div>
               </div>
             </div>
@@ -2799,6 +2814,11 @@ export class Settings {
     }
 
     this.saveShowHidden();
+
+    const matchTzBtn = $('#match-tz .toggle-option.active', this.container);
+    if (matchTzBtn?.dataset.value) StorageService.setMatchTz(matchTzBtn.dataset.value === 'server' ? 'server' : 'device');
+    const hideGuideBtn = $('#hide-guide .toggle-option.active', this.container);
+    if (hideGuideBtn) StorageService.setHideGuide(hideGuideBtn.dataset.value === 'on');
 
     const tzModeBtn = $('#tz-mode .toggle-option.active', this.container);
     if (tzModeBtn?.dataset.value) StorageService.setTzMode(tzModeBtn.dataset.value as TzMode);

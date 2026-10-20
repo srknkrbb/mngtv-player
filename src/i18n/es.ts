@@ -526,4 +526,10 @@ export const ES_MESSAGES = {
   'channel.sectionTrSport': 'TURKIYE SPOR',
   'channel.sectionWorldSport': 'DUNYA SPOR',
   'channel.sectionTv': 'TV KANALLARI',
+  'settings.matchTz': 'Match times',
+  'settings.matchTzDevice': 'This TV\'s time',
+  'settings.matchTzServer': 'Türkiye time',
+  'settings.matchTzHint': 'Which clock the Matches screen uses. Channel names always show Türkiye time.',
+  'settings.hideGuide': 'Hide the Guide tab',
+  'settings.hideGuideHint': 'The Live preview panel (Right on a channel) shows what\'s on and upcoming programs; OK on a program sets a reminder.',
 } satisfies MessageCatalog;

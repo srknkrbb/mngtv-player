@@ -1929,6 +1929,12 @@ class App {
     // 'apply': only display settings changed — re-apply + re-render, no re-fetch.
     if (action === 'apply') {
       this.search.invalidateCatalog();
+      // mngtv: Rehber sekmesi gizle / mac saati ayari
+      this.tabBar.setSections(
+        StorageService.getPlaylists().some((p) => p.source === 'xtream' && isSourceEnabled(p)),
+        this.hasMatchGroup(),
+      );
+      this.matchesView.refresh();
       this.applyDisplayTz();
       this.epgGrid.resetDay();
       this.scheduleEpgRefresh();

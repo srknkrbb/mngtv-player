@@ -2,6 +2,7 @@ import type { Action, PlaylistEntry } from '../types';
 import { html, raw } from '../utils/dom';
 import { morph } from '../utils/morph';
 import { CONFIG } from '../config';
+import { StorageService } from '../services/storage-service';
 import { SEARCH_ICON, UNLOCK_ICON } from './icons';
 import { AccountSwitcher, type AccountMenuCloseReason, type AccountMenuExtra } from './account-switcher';
 
@@ -163,8 +164,9 @@ export class TabBar {
   setSections(hasXtream: boolean, hasMatches = false): void {
     this.hasXtream = hasXtream;
     // Xtream hesabinda Ayarlar avatar menusunden acilir (sekme yok); M3U'da avatar olmadigindan sekme kalir.
+    const hideGuide = StorageService.getHideGuide();
     this.sections = (hasXtream ? FULL_SECTIONS : LITE_SECTIONS)
-      .filter((s) => (s.id !== 'matches' || hasMatches) && (s.id !== 'settings' || !hasXtream));
+      .filter((s) => (s.id !== 'matches' || hasMatches) && (s.id !== 'settings' || !hasXtream) && (s.id !== 'epg' || !hideGuide));
     this.accountExtras = hasXtream ? [{ id: 'settings', label: t('nav.settings') }] : [];
     this.switcher?.setExtras(this.accountExtras);
     if (!this.sections.some((s) => s.id === this.active)) this.active = 'live';

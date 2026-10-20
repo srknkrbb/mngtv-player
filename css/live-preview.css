@@ -318,3 +318,12 @@
   border-radius: var(--radius);
   font-size: 16px;
 }
+
+/* mngtv: yaklasan program satirlari odaklanabilir; OK = hatirlatici */
+.live-preview-program { padding: 0 10px; border-radius: 8px; }
+.live-preview-program span:not(.live-preview-bell) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-preview-program.focused { background: var(--bg-tertiary); box-shadow: 0 0 0 3px var(--focus-ring); }
+.live-preview-bell { display: inline-flex; flex: 0 0 auto; width: 24px; height: 24px; color: var(--text-muted); opacity: 0.5; }
+.live-preview-bell svg { width: 24px; height: 24px; }
+.live-preview-program.reminder-set .live-preview-bell { color: var(--accent); opacity: 1; }
+.live-preview-program.focused .live-preview-bell { opacity: 1; }
