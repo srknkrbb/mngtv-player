@@ -62,7 +62,7 @@
   gap: 10px;
   margin-left: auto;
   padding: 4px 12px;
-  color: #6b5a1e;
+  color: #4a3d0f;
   font: inherit;
   font-size: 18px;
   background: #f3e3a3;              /* solgun sari */
@@ -70,7 +70,8 @@
   border-radius: var(--radius);
 }
 
-.matches-toggle strong { color: #4a3d0f; font-size: 19px; }
+.matches-toggle strong,
+.matches-section-heading .matches-toggle strong { color: #3d320a; font-size: 19px; font-weight: 700; }
 .matches-toggle em { color: #8a7738; font-size: 16px; font-style: normal; }
 .matches-toggle.open { background: #e8d78f; }
 
