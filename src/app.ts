@@ -62,6 +62,7 @@ import type {
   PlaylistEntry,
 } from './types';
 import { getLocale, initLocale, resolveLocale, setLocale, t, tp } from './i18n';
+import { MngtvSync, mngtvTelemetry } from './services/mngtv';
 
 const log = createLogger('App');
 
@@ -100,6 +101,8 @@ class App {
   private serviceEventsSubscription: LunaRequestHandle | null = null;
   private deviceSetupSync = Promise.resolve();
   private playlistRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  // mngtv: sunucu ozeti degisince liste+EPG yenilenir (queuePlaylistRefresh ikisini de yapar)
+  private readonly mngtvSync = new MngtvSync(() => this.queuePlaylistRefresh());
   private playlistRefreshIntervalMs: number | null | undefined;
   private playlistRefreshPromise: Promise<void> | null = null;
   // The load confirmation toast owns the screen until loadData() settles.
@@ -1004,6 +1007,8 @@ class App {
       }
       this.schedulePlaylistRefresh(true);
       this.searchPrewarm.schedule('startup');
+      this.mngtvSync.start();
+      mngtvTelemetry.start();
     } catch (err) {
       log.error('loadData failed:', err);
       this.showView('settings');

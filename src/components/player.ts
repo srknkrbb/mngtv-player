@@ -47,6 +47,7 @@ import {
   type PlayerOsdStreamInfo,
 } from './player-osd';
 import { PlayerTracks } from './player-tracks';
+import { mngtvTelemetry } from '../services/mngtv';
 
 const log = createLogger('Player');
 
@@ -196,6 +197,8 @@ export class Player {
           'event=playback.recovery.reload', this.playbackLabel(),
           `cause=${recovery.cause}`,
           this.recoveryState(recovery));
+        mngtvTelemetry.record(recovery.cause === 'stall' ? 'stall' : 'reload', this.currentChannel,
+          { ms: Math.round(recovery.frozenMs), detail: `${recovery.cause} ${String(recovery.reloadCount)}/${String(recovery.maxReloads)}` });
         this.reloadCurrentStream();
       },
       onEscalate: recovery => {
@@ -204,6 +207,7 @@ export class Player {
           `cause=${recovery.cause}`,
           this.recoveryState(recovery));
         this.markLiveUnavailable(recovery.cause === 'stall' ? 'stall_exhausted' : 'playback_error');
+        mngtvTelemetry.record('exhausted', this.currentChannel, { ms: Math.round(recovery.frozenMs), detail: recovery.cause });
         if (CONFIG.MNGTV.STAY_ON_CHANNEL && this.liveSessionActive && !this.catchupInfo) {
           // mngtv: kanalda kal; sunucu akisi degistirir, biz ayni adresi yeniden yukleriz.
           this.osd.updateMessage(t('player.reconnecting'));
@@ -624,6 +628,7 @@ export class Player {
     this.pendingSeekTarget = null;
 
     log.info('play index', channelIndex, '|', channel.name, catchup ? '(catchup)' : '');
+    if (!catchup) mngtvTelemetry.record('play', channel);
     this.currentChannel = channel;
     this.currentIndex = channelIndex;
     if (channelIndex >= 0) this.currentIndexAnchor = channelIndex;
@@ -1077,6 +1082,7 @@ export class Player {
     }
     this.stallWatchdog.stop();
     this.markLiveUnavailable('playback_error');
+    mngtvTelemetry.record('error', this.currentChannel, { detail: `${reason} ${String(v?.error?.code ?? '')}` });
     if (CONFIG.MNGTV.STAY_ON_CHANNEL && this.liveSessionActive && !this.catchupInfo) {
       this.osd.updateMessage(t('player.reconnecting'));
       this.errorAdvanceTimer = setTimeout(() => {
@@ -1109,6 +1115,7 @@ export class Player {
         || this.healthSuccessGeneration === this.playbackGeneration) return;
     this.healthSuccessGeneration = this.playbackGeneration;
     const latencyMs = Math.max(0, Date.now() - this.healthStartedAt);
+    mngtvTelemetry.record('startup', this.currentChannel, { ms: latencyMs });
     void ChannelHealthService.recordPlaybackSuccess(this.currentChannel, latencyMs)
       .then(changed => {
         if (changed) this.onChannelHealthChanged();

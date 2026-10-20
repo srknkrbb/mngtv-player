@@ -20,6 +20,10 @@ export const CONFIG = {
       NARROWING: true,             // sorgu oncekini uzatiyorsa yalniz onceki eslesme kumesi taranir
       NAME_PREFIX_INDEX: true,     // film/dizi adlari icin kelime-basi on-ek dizini
     },
+    // Sunucu tetiklemeli yenileme: {xtream}/mngtv/version.json ozeti degisince liste+EPG yenilenir.
+    SYNC: { ENABLED: true, POLL_MS: 60_000, TIMEOUT_MS: 8000, BACKOFF_MS: 60 * 60 * 1000 },
+    // Oynatici olaylari {xtream}/mngtv/telemetry'ye (yayin sagligi ek sinyali). Sunucu vermiyorsa 1 sa sonra tekrar denenir.
+    TELEMETRY: { ENABLED: true, FLUSH_MS: 30_000, BATCH: 20, MAX_QUEUE: 200, BACKOFF_MS: 60 * 60 * 1000 },
   },
 
   // Versioned channel customization record (order, display, grouping, and EPG overrides).
