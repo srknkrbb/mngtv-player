@@ -258,6 +258,10 @@ function parseServerOffset(server: Record<string, unknown>): number | null {
   return Math.round((wallClockAsUtc - timestamp * 1000) / 60000);
 }
 
+// mngtv: sunucu diger istemcilere (VU Player vb.) bolum basliklari ve sade grup adlariyla hazir liste verir;
+// mngtv player ham listeyi ister ve sunumu kendisi yapar (Gunun Maclari gruplari Maclar sekmesi icin gelir).
+const MNGTV_RAW: Record<string, string | number> | undefined = CONFIG.MNGTV.SIDEBAR.ENABLED ? { mngtv: 1 } : undefined;
+
 /** A per-account handle over the Xtream `player_api.php` JSON endpoint. Flat
  *  composition (no inheritance); catalog methods grow on the same factory. */
 export function createXtreamClient(creds: XtreamCredentials, accountId = '') {
@@ -287,7 +291,7 @@ export function createXtreamClient(creds: XtreamCredentials, accountId = '') {
 
     async getLiveStreams(signal?: AbortSignal): Promise<XtreamLiveStream[]> {
       return parseLiveStreams(await fetchJson(
-        xtreamPlayerApi(creds, 'get_live_streams'),
+        xtreamPlayerApi(creds, 'get_live_streams', MNGTV_RAW),
         CATALOG_TIMEOUT,
         CONFIG.XTREAM.CATALOG_MAX_BYTES,
         signal,
@@ -297,7 +301,7 @@ export function createXtreamClient(creds: XtreamCredentials, accountId = '') {
     async getLiveStreamsResult(signal?: AbortSignal): Promise<XtreamLiveCatalogResult> {
       try {
         const value = await fetchJsonStrict(
-          xtreamPlayerApi(creds, 'get_live_streams'),
+          xtreamPlayerApi(creds, 'get_live_streams', MNGTV_RAW),
           CATALOG_TIMEOUT,
           CONFIG.XTREAM.CATALOG_MAX_BYTES,
           signal,
@@ -314,7 +318,7 @@ export function createXtreamClient(creds: XtreamCredentials, accountId = '') {
 
     async getLiveCategories(signal?: AbortSignal): Promise<XtreamLiveCategory[]> {
       const arr = asArray(await fetchJson(
-        xtreamPlayerApi(creds, 'get_live_categories'),
+        xtreamPlayerApi(creds, 'get_live_categories', MNGTV_RAW),
         CATALOG_TIMEOUT,
         CONFIG.XTREAM.CATEGORY_MAX_BYTES,
         signal,
