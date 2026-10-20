@@ -13,7 +13,7 @@ import { normalizeXtreamBaseUrl, xtreamCredentialsFromLiveUrl, type XtreamCreden
 
 const log = createLogger('mngtv');
 
-export type MngtvEvent = 'play' | 'startup' | 'stall' | 'reload' | 'exhausted' | 'error' | 'stop';
+export type MngtvEvent = 'play' | 'startup' | 'stall' | 'reload' | 'exhausted' | 'error' | 'stop' | 'gone';
 
 interface QueuedEvent {
   t: number;

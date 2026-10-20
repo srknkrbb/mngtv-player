@@ -166,6 +166,7 @@ export const TR_MESSAGES = {
   'player.playNow': 'Şimdi oynat',
   'player.unableToPlay': 'Bu video oynatılamıyor.',
   'player.reconnecting': 'Yeniden bağlanıyor…',
+  'player.channelGone': 'Bu kanal artık listede yok (yayın kaldırıldı).',
   'player.retryingCatchup': 'Geri İzle yeniden deneniyor…',
   'player.streamError': 'Oynatma hatası — sonraki kanal deneniyor…',
   'player.resyncing': 'Yeniden eşitleniyor…',

@@ -181,6 +181,7 @@ export const RU_MESSAGES = {
   'player.playNow': 'Смотреть сейчас',
   'player.unableToPlay': 'Не удалось воспроизвести это видео.',
   'player.reconnecting': 'Повторное подключение…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': 'Повторная загрузка из архива…',
   'player.streamError': 'Ошибка воспроизведения — переход к следующему каналу…',
   'player.resyncing': 'Синхронизация…',

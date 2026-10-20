@@ -662,6 +662,20 @@ describe('Player live playback', () => {
     expect(onPlaybackChanged).toHaveBeenLastCalledWith(-1, null);
   });
 
+  it('mngtv: stops and leaves when the playing live channel left the playlist', () => {
+    const onBack = vi.fn();
+    player = new Player(container, onBack, vi.fn());
+    player.init(video);
+    player.play(0);
+    playlistMock.resolveChannelKey.mockReturnValue(null);
+    (playlistMock as unknown as { allChannels: unknown[] }).allChannels = [{ name: 'other', url: 'http://x/other' }];
+
+    player.syncCurrentIndex();
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+    (playlistMock as unknown as { allChannels: unknown[] }).allChannels = [];
+  });
+
   it('ignores the outgoing stream\'s state until the new source is attached', async () => {
     playlistMock.channels = [{}, {}];
     // Left over from the channel that just failed; the next load has not

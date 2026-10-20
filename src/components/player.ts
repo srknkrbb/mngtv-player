@@ -66,6 +66,10 @@ export class Player {
   private playbackRate: PlaybackRateController;
   private osd: PlayerOsd;
   private currentChannel: Channel | null = null;
+  private mngtvErrorStreak = 0;
+  private lastStreakChannel: Channel | null = null;
+  /** mngtv: ayni kanalda ust uste hata; uygulama listeyi yeniden kontrol eder (kanal kalkmis olabilir). */
+  onChannelSuspect: (() => void) | null = null;
   private currentIndex = -1;
   private currentIndexAnchor = -1;
   // The view (group/playlist) the current channel was launched from, if any —
@@ -269,6 +273,7 @@ export class Player {
     };
     const update = (status?: LivePlaybackStatus) => {
       if (status && this.liveSessionActive) this.livePlaybackStatus = status;
+      if (status === 'playing') this.mngtvErrorStreak = 0;
       this.onPlaybackStateChanged();
     };
     onCurrent('pause', () => update('paused'));
@@ -630,6 +635,7 @@ export class Player {
     log.info('play index', channelIndex, '|', channel.name, catchup ? '(catchup)' : '');
     if (!catchup) mngtvTelemetry.record('play', channel);
     this.currentChannel = channel;
+    if (channel !== this.lastStreakChannel) { this.mngtvErrorStreak = 0; this.lastStreakChannel = channel; }
     this.currentIndex = channelIndex;
     if (channelIndex >= 0) this.currentIndexAnchor = channelIndex;
     if (scope !== undefined) this.currentScope = scope;
@@ -1085,6 +1091,8 @@ export class Player {
     mngtvTelemetry.record('error', this.currentChannel, { detail: `${reason} ${String(v?.error?.code ?? '')}` });
     if (CONFIG.MNGTV.STAY_ON_CHANNEL && this.liveSessionActive && !this.catchupInfo) {
       this.osd.updateMessage(t('player.reconnecting'));
+      this.mngtvErrorStreak += 1;
+      if (this.mngtvErrorStreak === 2) this.onChannelSuspect?.();   // mngtv: liste degismis olabilir -> kontrol
       this.errorAdvanceTimer = setTimeout(() => {
         this.errorAdvanceTimer = null;
         this.stallWatchdog.start(isWebOS(), StorageService.getLiveReconnectAttempts());
@@ -1515,6 +1523,20 @@ export class Player {
   syncCurrentIndex(): void {
     if (!this.currentChannel) return;
     const resolved = PlaylistService.resolveChannelKey(channelKey(this.currentChannel));
+    // Gizlenen kanal listede kalir (allChannels); yalniz listeden tamamen kalkan kanal "gitti" sayilir.
+    const key = channelKey(this.currentChannel);
+    const all = PlaylistService.allChannels;
+    const gone = !resolved && Array.isArray(all) && all.length > 0 && !all.some(ch => channelKey(ch) === key);
+    if (gone && this.liveSessionActive && !this.catchupInfo && !this.vod && !this.livePreviewMode) {
+      // mngtv: kanal sunucudan kalkti (or. Gunun Maclari yenilendi, mac listeden dustu). Eski adres 404 doner;
+      // "yeniden baglaniyor"da sonsuza kadar beklemek yerine durdur ve geldigimiz ekrana don.
+      log.warn('Playing channel left the playlist; stopping', 'event=playback.channel.gone', this.playbackLabel());
+      mngtvTelemetry.record('gone', this.currentChannel, {});
+      this.stop();
+      showToast(t('player.channelGone'));
+      this.onBack();
+      return;
+    }
     if (!resolved) {
       this.currentIndex = -1;
       this.onTvPlaybackChanged(-1, this.catchupInfo ? this.catchupInfo.start * 1000 : null);

@@ -166,6 +166,7 @@ export const ZH_CN_MESSAGES = {
   'player.playNow': '立即播放',
   'player.unableToPlay': '无法播放此视频。',
   'player.reconnecting': '正在重新连接…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': '正在重试回看…',
   'player.streamError': '播放出错，正在尝试下一个频道…',
   'player.resyncing': '正在重新同步…',

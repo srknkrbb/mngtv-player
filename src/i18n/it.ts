@@ -169,6 +169,7 @@ export const IT_MESSAGES = {
   'player.playNow': 'Riproduci ora',
   'player.unableToPlay': 'Impossibile riprodurre questo video.',
   'player.reconnecting': 'Riconnessione…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': 'Nuovo tentativo di replay…',
   'player.streamError': 'Errore di riproduzione — tentativo con il canale successivo…',
   'player.resyncing': 'Risincronizzazione…',

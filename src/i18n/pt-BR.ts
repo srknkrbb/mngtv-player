@@ -171,6 +171,7 @@ export const PT_BR_MESSAGES = {
   'player.playNow': 'Assistir agora',
   'player.unableToPlay': 'Não foi possível reproduzir este vídeo.',
   'player.reconnecting': 'Reconectando…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': 'Tentando reproduzir o replay novamente…',
   'player.streamError': 'Erro de reprodução — tentando o próximo canal…',
   'player.resyncing': 'Ressincronizando…',

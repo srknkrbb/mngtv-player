@@ -173,6 +173,7 @@ export const EN_MESSAGES = {
   'player.playNow': 'Play now',
   'player.unableToPlay': 'Unable to play this video.',
   'player.reconnecting': 'Reconnecting…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': 'Retrying catch-up…',
   'player.streamError': 'Playback error — trying the next channel…',
   'player.resyncing': 'Resyncing…',

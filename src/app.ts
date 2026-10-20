@@ -1031,6 +1031,8 @@ class App {
       this.schedulePlaylistRefresh(true);
       this.searchPrewarm.schedule('startup');
       this.mngtvSync.start();
+      // mngtv: ayni kanalda ust uste hata -> listeyi yenile; kanal kalkmissa oynatici durur ve geri doner (syncCurrentIndex)
+      this.player.onChannelSuspect = () => { void this.queuePlaylistRefresh(); };
       mngtvTelemetry.start();
     } catch (err) {
       log.error('loadData failed:', err);

@@ -181,6 +181,7 @@ export const UK_MESSAGES = {
   'player.playNow': 'Дивитися зараз',
   'player.unableToPlay': 'Не вдалося відтворити це відео.',
   'player.reconnecting': 'Повторне підключення…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': 'Повторне завантаження з ТВ-архіву…',
   'player.streamError': 'Помилка відтворення — перехід до наступного каналу…',
   'player.resyncing': 'Синхронізація…',

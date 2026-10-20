@@ -171,6 +171,7 @@ export const ES_MESSAGES = {
   'player.playNow': 'Reproducir ahora',
   'player.unableToPlay': 'No se puede reproducir este video.',
   'player.reconnecting': 'Reconectando…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': 'Reintentando la reproducción en catch-up…',
   'player.streamError': 'Error de reproducción — probando el siguiente canal…',
   'player.resyncing': 'Sincronizando de nuevo…',

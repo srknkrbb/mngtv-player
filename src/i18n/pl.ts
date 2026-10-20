@@ -181,6 +181,7 @@ export const PL_MESSAGES = {
   'player.playNow': 'Odtwórz teraz',
   'player.unableToPlay': 'Nie można odtworzyć tego materiału.',
   'player.reconnecting': 'Ponowne łączenie…',
+  'player.channelGone': 'This channel is no longer in the list.',
   'player.retryingCatchup': 'Ponawianie odtwarzania programu…',
   'player.streamError': 'Błąd odtwarzania — próbuję włączyć następny kanał…',
   'player.resyncing': 'Synchronizowanie…',
