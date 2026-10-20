@@ -14,6 +14,7 @@ import { html, raw } from '../utils/dom';
 import { morph } from '../utils/morph';
 import { t } from '../i18n';
 import { liveBadge } from './live-badge';
+import { matchScore, type MatchScore } from '../services/mngtv';
 import { bellIcon } from './icons';
 import { showToast } from './toast';
 
@@ -28,6 +29,8 @@ export interface MatchRow {
   status: MatchStatus;
   programme: Programme | null;
   world: boolean;       // DUNYA grubu
+  key: string;          // "Ev - Deplasman" (skor tablosu anahtari)
+  score: MatchScore | null;
 }
 
 const TIME_PREFIX = /^\((\d{1,2})[:.](\d{2})\)\s*/;
@@ -35,6 +38,17 @@ const TIME_PREFIX = /^\((\d{1,2})[:.](\d{2})\)\s*/;
 const ENDED_TITLE = /\(sona erdi\)|\(ended\)|\(bitti\)/i;
 const PRE_TITLE = /\(saat \d{1,2}[:.]\d{2}\)\s*$/i;
 const LIVE_PREFIX = /^CANLI:\s*/i;
+
+/** EPG basligindan mac anahtari: "CANLI: A - B | via" / "A - B | via (saat ..)" / "A - B (sona erdi) | via" -> "A - B". */
+export function matchKey(programmeTitle: string | null | undefined, fallbackTitle: string): string {
+  if (programmeTitle) {
+    const base = programmeTitle.replace(LIVE_PREFIX, '').split(' | ')[0].replace(ENDED_TITLE, '').replace(PRE_TITLE, '').trim();
+    if (base) return base;
+  }
+  // Kanal adi: "A-B Kanal" -> ilk "A-B" parcasini "A - B" yap (en iyi caba)
+  const m = /^(.+?)-(.+?)(?:\s[·|]\s|\s+[A-Z][^-]*$)/.exec(fallbackTitle);
+  return m ? `${m[1].trim()} - ${m[2].trim()}` : fallbackTitle;
+}
 const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000;
 
 export function isMatchGroup(group: string): boolean {
@@ -71,6 +85,7 @@ export function buildMatchRows(
   channels: readonly Channel[],
   programmesOf: (channel: Channel) => Programme[] | null,
   now: number,
+  scoreOf: (key: string) => MatchScore | null = matchScore,
 ): MatchRow[] {
   const rows: MatchRow[] = [];
   channels.forEach((channel, index) => {
@@ -92,14 +107,16 @@ export function buildMatchRows(
       }
       end = new Date(start.getTime() + DEFAULT_DURATION_MS);
     }
-    const status: MatchStatus = epg.ended
+    const key = matchKey(epg.programme?.title, title);
+    const score = scoreOf(key);
+    const status: MatchStatus = epg.ended || score?.state === 'post'
       ? 'ended'
       : !start || !end
         ? 'upcoming'
         : start.getTime() <= now && end.getTime() > now
           ? 'live'
           : start.getTime() > now ? 'upcoming' : 'ended';
-    rows.push({ channel, index, title, start, end, status, programme: epg.programme, world: /DUNYA|WORLD/i.test(channel.group) });
+    rows.push({ channel, index, title, start, end, status, programme: epg.programme, world: /DUNYA|WORLD/i.test(channel.group), key, score });
   });
   const order: Record<MatchStatus, number> = { live: 0, upcoming: 1, ended: 2 };
   rows.sort((a, b) => order[a.status] - order[b.status]
@@ -197,10 +214,7 @@ export class MatchesView {
     morph(this.container, html`
       <div class="matches-view">
         <header class="matches-hero">
-          <div class="matches-hero-text">
-            <h1>${t('matches.title')}</h1>
-            <p>${rows.length ? t('matches.summary', { count: rows.length, live: live.length }) : ''}</p>
-          </div>
+          <p class="matches-summary">${rows.length ? t('matches.summary', { count: rows.length, live: live.length }) : t('matches.title')}</p>
           ${rows.length
             ? html`<button class="matches-toggle ${this.endedOpen ? 'open' : ''}" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
                      <strong>${t('matches.ended')}</strong><span>${ended.length}</span>
@@ -253,6 +267,23 @@ export class MatchesView {
     const reminder = row.status === 'upcoming' && row.start && row.end
       ? ReminderService.has(channelKey(row.channel), row.start.getTime())
       : null;
+    const liveScore = row.status === 'live' && row.score?.state === 'in' && row.score.score ? row.score : null;
+    if (row.status === 'ended') {
+      // Biten mac: kanala gitmez; skor (varsa) yazilir
+      return html`
+        <div class="matches-row matches-row-ended" data-row-key="${key}">
+          <div class="matches-main matches-static">
+            <time class="matches-time">${time}${dayLabel ? html`<small>${dayLabel}</small>` : ''}</time>
+            <div class="matches-details"><div class="matches-title">${row.title}</div></div>
+            <div class="matches-status">
+              ${row.score?.score
+                ? html`<span class="matches-score">${row.score.score}</span>`
+                : html`<span class="matches-badge matches-badge-ended">${t('matches.endedBadge')}</span>`}
+            </div>
+          </div>
+        </div>
+      `;
+    }
     return html`
       <div class="matches-row matches-row-${row.status}" data-row-key="${key}">
         <button class="matches-main" data-focusable data-key="${key}" data-match-index="${row.index}" data-match-action="play">
@@ -260,16 +291,13 @@ export class MatchesView {
           <div class="matches-details">
             <div class="matches-title">${row.title}</div>
             <div class="matches-meta">
-              ${row.status !== 'ended' && endTime ? html`<span class="matches-end">${t('matches.until', { time: endTime })}</span>` : ''}
+              ${endTime ? html`<span class="matches-end">${t('matches.until', { time: endTime })}</span>` : ''}
               ${row.world ? html`<span class="matches-world">${t('matches.world')}</span>` : ''}
             </div>
           </div>
           <div class="matches-status">
-            ${row.status === 'live'
-              ? liveBadge('matches-live')
-              : row.status === 'ended'
-                ? html`<span class="matches-badge matches-badge-ended">${t('matches.endedBadge')}</span>`
-                : ''}
+            ${liveScore ? html`<span class="matches-score matches-score-live">${liveScore.score}<small>${liveScore.status}</small></span>` : ''}
+            ${row.status === 'live' ? liveBadge('matches-live') : ''}
           </div>
         </button>
         ${reminder !== null

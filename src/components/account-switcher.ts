@@ -3,7 +3,7 @@ import { html, raw } from '../utils/dom';
 import { morph } from '../utils/morph';
 import { avatarColor, firstLetter } from '../utils/avatar';
 import { t } from '../i18n';
-import { CHECK_ICON } from './icons';
+import { ADVANCED_ICON as GEAR_ICON, CHECK_ICON } from './icons';
 import { Focus, Tier, type FocusScope, type Via } from '../navigation/focus-scope';
 
 export type AccountMenuOpenMode = 'key' | 'pointer';
@@ -11,8 +11,15 @@ export type AccountMenuOpenMode = 'key' | 'pointer';
 // `host` is a close the owning component asked for (hidden, color key).
 export type AccountMenuCloseReason = 'key' | 'toggle' | 'outside' | 'choose' | 'host';
 
+/** mngtv: hesaplarin altinda ek menu satiri (orn. Ayarlar). */
+export interface AccountMenuExtra {
+  id: string;
+  label: string;
+}
+
 interface AccountSwitcherHandlers {
   onSelect: (accountId: string) => void;
+  onExtra?: (id: string) => void;
   onMenuOpen?: (mode: AccountMenuOpenMode) => void;
   // `hit` is the element under an `outside` click or an avatar `toggle`.
   onMenuClose?: (reason: AccountMenuCloseReason, hit?: Element) => void;
@@ -33,6 +40,7 @@ export class AccountSwitcher {
   private slot: HTMLElement;
   private handlers: AccountSwitcherHandlers;
   private accounts: PlaylistEntry[] = [];
+  private extras: AccountMenuExtra[] = [];
   private selectedId = '';
   private open = false;
   private menuIndex = 0;
@@ -55,6 +63,16 @@ export class AccountSwitcher {
   get shown(): boolean { return this.accounts.length > 0; }
   get menuOpen(): boolean { return this.open; }
   get menuScope(): FocusScope | null { return this.scope; }
+
+  setExtras(extras: AccountMenuExtra[]): void {
+    this.extras = extras;
+    this.render();
+  }
+
+  /** Menu satirlari: hesaplar + ek satirlar (anahtar 'extra:<id>'). */
+  private rowIds(): string[] {
+    return [...this.accounts.map((a) => a.id), ...this.extras.map((x) => `extra:${x.id}`)];
+  }
 
   setAccounts(accounts: PlaylistEntry[], selectedId: string): void {
     this.accounts = accounts;
@@ -84,7 +102,7 @@ export class AccountSwitcher {
 
   handleAction(action: Action): void {
     if (!this.open) return;
-    const n = this.accounts.length;
+    const n = this.rowIds().length;
     switch (action) {
       case 'up':
         this.menuIndex = (this.menuIndex - 1 + n) % n;
@@ -95,7 +113,7 @@ export class AccountSwitcher {
         this.highlight('key');
         break;
       case 'select':
-        this.choose(this.accounts[this.menuIndex].id);
+        this.choose(this.rowIds()[this.menuIndex]);
         break;
       case 'back':
       case 'left':
@@ -136,7 +154,7 @@ export class AccountSwitcher {
     this.slot.addEventListener('nav:hover', (e: Event) => {
       if (!this.open || !(e.target instanceof Element)) return;
       const row = e.target.closest<HTMLElement>('.account-menu-item');
-      const idx = row ? this.accounts.findIndex((a) => a.id === row.dataset.accountId) : -1;
+      const idx = row ? this.rowIds().indexOf(row.dataset.accountId ?? '') : -1;
       if (idx < 0) return;
       this.menuIndex = idx;
       this.highlight('pointer');
@@ -149,8 +167,8 @@ export class AccountSwitcher {
   }
 
   private rowKey(index: number): string | null {
-    const account = this.accounts[index];
-    return account ? `acc:${account.id}` : null;
+    const id = this.rowIds()[index];
+    return id ? `acc:${id}` : null;
   }
 
   private highlight(via: Via): void {
@@ -160,6 +178,13 @@ export class AccountSwitcher {
 
   private choose(id: string): void {
     this.open = false;
+    if (id.startsWith('extra:')) {
+      this.render();
+      if (this.scope) Focus.pop(this.scope);
+      this.handlers.onMenuClose?.('choose');
+      this.handlers.onExtra?.(id.slice('extra:'.length));
+      return;
+    }
     const changed = id !== this.selectedId;
     if (changed) this.selectedId = id;
     this.render();
@@ -184,6 +209,14 @@ export class AccountSwitcher {
               <span class="account-menu-avatar" style="background:${avatarColor(a.name)}">${firstLetter(a.name)}</span>
               <span class="account-menu-name">${a.name}</span>
               <span class="account-menu-check">${a.id === this.selectedId ? raw(CHECK_ICON) : ''}</span>
+            </div>
+          `)}
+          ${this.extras.map((x, j) => html`
+            <div class="account-menu-item account-menu-extra ${painted && this.accounts.length + j === this.menuIndex ? 'focused' : ''}"
+                 data-key="acc:extra:${x.id}" data-account-id="extra:${x.id}" data-hover-target>
+              <span class="account-menu-avatar account-menu-extra-icon">${raw(GEAR_ICON)}</span>
+              <span class="account-menu-name">${x.label}</span>
+              <span class="account-menu-check"></span>
             </div>
           `)}
         </div>

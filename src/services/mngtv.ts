@@ -37,6 +37,25 @@ interface VersionDoc {
 const VERSION_KEY = 'mngtv_version';
 const CLIENT = `mngtv/${CONFIG.VERSION}`;
 
+/** Sunucunun /mngtv/scores.json kaydi: "Ev - Deplasman" -> skor. */
+export interface MatchScore {
+  score: string;              // "2 - 0" (bos: henuz yok)
+  status: string;             // "FT", "63'", "Scheduled"
+  state: 'pre' | 'in' | 'post' | string;
+}
+
+const scoreTable = new Map<string, MatchScore>();
+
+/** Mac anahtari ("A - B") icin skor; yoksa null. */
+export function matchScore(key: string): MatchScore | null {
+  return scoreTable.get(key) ?? null;
+}
+
+export function setScoresForTest(entries: Record<string, MatchScore>): void {
+  scoreTable.clear();
+  for (const [k, v] of Object.entries(entries)) scoreTable.set(k, v);
+}
+
 function enabledXtreamBases(): string[] {
   const out = new Set<string>();
   for (const p of StorageService.getPlaylists()) {
@@ -55,7 +74,10 @@ export class MngtvSync {
   private disabledUntil = new Map<string, number>();
   private inFlight = false;
 
-  constructor(private readonly onChanged: () => Promise<void> | void) {}
+  constructor(
+    private readonly onChanged: () => Promise<void> | void,
+    private readonly onScores?: () => void,
+  ) {}
 
   start(): void {
     this.stop();
@@ -97,6 +119,7 @@ export class MngtvSync {
         if ((this.disabledUntil.get(base) ?? 0) > now) continue;
         const doc = await this.fetchVersion(base);
         if (!doc) continue;
+        await this.fetchScores(base);
         const prev = known[base];
         known[base] = { playlist: doc.playlist, epg: doc.epg };
         if (prev) {
@@ -121,6 +144,22 @@ export class MngtvSync {
       log.warn('Version poll failed', 'event=mngtv.version.failed', err);
     } finally {
       this.inFlight = false;
+    }
+  }
+
+  private async fetchScores(base: string): Promise<void> {
+    try {
+      const res = await fetch(`${base}/mngtv/scores.json`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const doc = await res.json() as { scores?: Record<string, MatchScore> };
+      if (!doc?.scores || typeof doc.scores !== 'object') return;
+      scoreTable.clear();
+      for (const [k, v] of Object.entries(doc.scores)) {
+        if (v && typeof v === 'object') scoreTable.set(k, { score: String(v.score ?? ''), status: String(v.status ?? ''), state: String(v.state ?? '') });
+      }
+      this.onScores?.();
+    } catch {
+      /* skor yoksa gorunum skorsuz calisir */
     }
   }
 

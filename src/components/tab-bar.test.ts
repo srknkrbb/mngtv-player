@@ -51,7 +51,8 @@ describe('TabBar', () => {
   it('renders the app title and the full section set for an Xtream account', () => {
     expect(bar.shown).toBe(true);
     expect(document.querySelector('.tab-bar-title')?.textContent).toBe('mngtv');
-    expect(items()).toEqual(['Live', 'Guide', 'Movies', 'Series', 'Settings', 'Search']);
+    // mngtv sirasi; Ayarlar Xtream hesabinda avatar menusunde
+    expect(items()).toEqual(['Live', 'Movies', 'Series', 'Guide', 'Search']);
     expect(focusedLabel()).toBe(null); // shown but not focused → no ring
     expect(document.body.classList.contains('tabbar-docked')).toBe(true);
   });
@@ -80,13 +81,13 @@ describe('TabBar', () => {
   it('right/left switch the active section live and call onSwitch, staying focused', () => {
     bar.focus();
     press('right');
-    expect(focusedLabel()).toBe('Guide');
+    expect(focusedLabel()).toBe('Movies');
     expect(bar.focused).toBe(true);
-    expect(onSwitch).toHaveBeenLastCalledWith('epg');
-    press('right');
     expect(onSwitch).toHaveBeenLastCalledWith('movies');
+    press('right');
+    expect(onSwitch).toHaveBeenLastCalledWith('series');
     press('left');
-    expect(onSwitch).toHaveBeenLastCalledWith('epg');
+    expect(onSwitch).toHaveBeenLastCalledWith('movies');
     expect(bar.focused).toBe(true);
   });
 
@@ -101,9 +102,9 @@ describe('TabBar', () => {
 
   it('down/select enters the active section and drops focus', () => {
     bar.focus();
-    press('right');   // → guide (live switch)
+    press('right');   // → movies (live switch)
     press('select');
-    expect(onEnter).toHaveBeenCalledWith('epg', 'key');
+    expect(onEnter).toHaveBeenCalledWith('movies', 'key');
     expect(bar.focused).toBe(false);
     expect(focusedLabel()).toBe(null);
   });
@@ -161,7 +162,7 @@ describe('TabBar', () => {
 
   it('enters a tab on a pointer click by coordinate hit-test', () => {
     bar.init();
-    const seriesBtn = document.querySelectorAll('.tab-bar-item')[3] as HTMLElement;
+    const seriesBtn = document.querySelectorAll('.tab-bar-item')[2] as HTMLElement;   // Live, Movies, Series
     seriesBtn.getBoundingClientRect = () =>
       ({ left: 200, top: 0, width: 100, height: 40, right: 300, bottom: 40, x: 200, y: 0, toJSON() {} }) as DOMRect;
     const origFromPoint = document.elementFromPoint;
@@ -177,12 +178,12 @@ describe('TabBar', () => {
     document.body.appendChild(view);
     const content = Focus.register({ id: 'view.test', root: view, leaveFor: { up: 'tabbar' } });
     Focus.setBase(() => content);
-    bar.setActive('settings');
+    bar.setActive('epg');
 
     expect(content.leave('up')).toBe(true);
     expect(bar.focused).toBe(true);
     expect(Focus.owner()?.id).toBe('tabbar');
-    expect(focusedLabel()).toBe('Settings');
+    expect(focusedLabel()).toBe('Guide');
 
     press('back');
     expect(Focus.owner()).toBe(content);
@@ -319,7 +320,7 @@ describe('TabBar', () => {
     expect(Focus.owner()?.id).toBe('tabbar');
     expect(onAccountMenuClose).toHaveBeenCalledWith('host', undefined);
     press('right');
-    expect(onSwitch).toHaveBeenLastCalledWith('epg');
+    expect(onSwitch).toHaveBeenLastCalledWith('movies');
   });
 });
 

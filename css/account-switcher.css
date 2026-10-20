@@ -98,3 +98,21 @@ html:not(.keyboard-nav) .account-avatar:hover {
   height: 26px;
   display: block;
 }
+
+/* mngtv: avatar menusundeki Ayarlar satiri */
+.account-menu-extra-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.account-menu-extra-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}

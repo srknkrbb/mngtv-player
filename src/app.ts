@@ -90,6 +90,7 @@ class App {
   private reminderPrompt = new ReminderPrompt();
   private reminderManager!: ReminderManager;
   private matchesView!: MatchesView;
+  private playerReturnView: 'channels' | 'matches' = 'channels';
   private reminderManagerOrigin: 'settings' | 'epg' = 'settings';
   private tabBar!: TabBar;
   private search!: Search;
@@ -104,7 +105,7 @@ class App {
   private deviceSetupSync = Promise.resolve();
   private playlistRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   // mngtv: sunucu ozeti degisince liste+EPG yenilenir (queuePlaylistRefresh ikisini de yapar)
-  private readonly mngtvSync = new MngtvSync(() => this.queuePlaylistRefresh());
+  private readonly mngtvSync = new MngtvSync(() => this.queuePlaylistRefresh(), () => this.matchesView.refresh());
   private playlistRefreshIntervalMs: number | null | undefined;
   private playlistRefreshPromise: Promise<void> | null = null;
   // The load confirmation toast owns the screen until loadData() settles.
@@ -166,6 +167,12 @@ class App {
       },
     );
     this.player = new Player(this.views.player, () => {
+      if (this.playerReturnView === 'matches') {          // mngtv: Maclar'dan acilan kanal geri tusunda Maclar'a doner
+        this.playerReturnView = 'channels';
+        this.showView('matches');
+        this.matchesView.open();
+        return;
+      }
       this.channelList.render();
       this.showView('channels');
     }, (idx, catchupStart) => {
@@ -203,8 +210,8 @@ class App {
     );
     this.matchesView = new MatchesView(
       this.views.matches,
-      (idx) => { this.tabBar.blur(); this.playChannel(idx); },
-      () => { this.matchesView.deactivate(); this.channelList.render(); this.showView('channels'); },
+      (idx) => { this.tabBar.blur(); this.playChannel(idx); this.playerReturnView = 'matches'; },
+      () => { this.matchesView.deactivate(); this.channelList.render(); this.tabBar.setActive('live'); this.showView('channels'); },
     );
     this.reminderManager = new ReminderManager(this.views.reminders, () => {
       if (this.reminderManagerOrigin === 'epg') {
@@ -1478,6 +1485,7 @@ class App {
   }
 
   private playChannel(index: number, catchup?: CatchupInfo, scope: ChannelScope | null = null): void {
+    this.playerReturnView = 'channels';
     this.player.play(index, catchup, scope, false);
   }
 

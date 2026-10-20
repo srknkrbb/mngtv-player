@@ -3,7 +3,7 @@ import { html, raw } from '../utils/dom';
 import { morph } from '../utils/morph';
 import { CONFIG } from '../config';
 import { SEARCH_ICON, UNLOCK_ICON } from './icons';
-import { AccountSwitcher, type AccountMenuCloseReason } from './account-switcher';
+import { AccountSwitcher, type AccountMenuCloseReason, type AccountMenuExtra } from './account-switcher';
 
 // `outside` is narrowed to a click on focusable content, which takes input and
 // releases the bar's focus; `bar` is a click on the bar outside the avatar
@@ -26,12 +26,13 @@ type SearchCollapseReason = 'toggle' | 'back' | 'escape' | 'dismiss' | 'hidden' 
 
 // The single source of truth for the sections: order, label, the view each maps
 // to, and whether it needs an Xtream account.
+// mngtv sirasi: Maclar, Canli, Filmler, Diziler, Rehber; Ayarlar Xtream hesabinda avatar menusunde (M3U'da sekme).
 export const SECTIONS = [
-  { id: 'live', labelKey: 'nav.live', view: 'channels', xtreamOnly: false },
   { id: 'matches', labelKey: 'nav.matches', view: 'matches', xtreamOnly: false }, // mngtv: Gunun Maclari
-  { id: 'epg', labelKey: 'nav.epg', view: 'epg', xtreamOnly: false },
+  { id: 'live', labelKey: 'nav.live', view: 'channels', xtreamOnly: false },
   { id: 'movies', labelKey: 'nav.movies', view: 'movies', xtreamOnly: true },
   { id: 'series', labelKey: 'nav.series', view: 'series', xtreamOnly: true },
+  { id: 'epg', labelKey: 'nav.epg', view: 'epg', xtreamOnly: false },
   { id: 'settings', labelKey: 'nav.settings', view: 'settings', xtreamOnly: false },
   { id: 'search', labelKey: 'nav.search', view: 'search', xtreamOnly: false },
 ] as const;
@@ -84,6 +85,7 @@ export class TabBar {
   private handlers: TabBarHandlers;
   private sections: readonly SectionDef[] = FULL_SECTIONS;
   private hasXtream = true;
+  private accountExtras: AccountMenuExtra[] = [];
   private _shown = false;   // docked & visible on the current view
   private _focused = false; // holds input focus (ring + key capture)
   private active: Section = 'live';
@@ -160,7 +162,11 @@ export class TabBar {
   /** mngtv: 'matches' sekmesi yalniz listede Gunun Maclari grubu varsa gosterilir. */
   setSections(hasXtream: boolean, hasMatches = false): void {
     this.hasXtream = hasXtream;
-    this.sections = (hasXtream ? FULL_SECTIONS : LITE_SECTIONS).filter((s) => s.id !== 'matches' || hasMatches);
+    // Xtream hesabinda Ayarlar avatar menusunden acilir (sekme yok); M3U'da avatar olmadigindan sekme kalir.
+    this.sections = (hasXtream ? FULL_SECTIONS : LITE_SECTIONS)
+      .filter((s) => (s.id !== 'matches' || hasMatches) && (s.id !== 'settings' || !hasXtream));
+    this.accountExtras = hasXtream ? [{ id: 'settings', label: t('nav.settings') }] : [];
+    this.switcher?.setExtras(this.accountExtras);
     if (!this.sections.some((s) => s.id === this.active)) this.active = 'live';
     this.focusIndex = Math.max(0, this.sections.findIndex((s) => s.id === this.active));
     if (this._shown) this.render();
@@ -589,6 +595,7 @@ export class TabBar {
     if (!this.switcher) {
       this.switcher = new AccountSwitcher(slot, {
         onSelect: (id) => this.handlers.onSelectAccount(id),
+        onExtra: (id) => { if (id === 'settings') this.handlers.onEnter('settings', 'key'); },
         onMenuOpen: (mode) => {
           log.debug('Account menu opened', 'event=account.menu.opened', `mode=${mode}`);
           // A pointer click opens the menu without routing through the bar:
@@ -615,6 +622,7 @@ export class TabBar {
         },
       }, 'tabbar.accounts');
       this.switcher.init();
+      this.switcher.setExtras(this.accountExtras);
     }
     this.switcher.setAccounts(this.accounts, this.selectedAccountId);
   }
