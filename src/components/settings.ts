@@ -738,7 +738,7 @@ export class Settings {
         <nav class="settings-sidebar" data-nav-container aria-label="${t('common.settings')}">
           <h2 class="settings-title">${t('common.settings')}</h2>
           <div class="settings-nav-list">
-            ${SETTINGS_CATEGORIES.map((category, index) => settingsNavItem(category, index === 0))}
+            ${SETTINGS_CATEGORIES.filter(c => CONFIG.MNGTV.ONLINE_SUBTITLES || c.id !== 'subtitles').map((category, index) => settingsNavItem(category, index === 0))}
           </div>
           <div class="settings-nav-help">
             <div class="settings-nav-help-row">
@@ -963,7 +963,7 @@ export class Settings {
               </div>
             </div>
 
-            <div class="settings-category" id="settings-subtitles" data-settings-category="subtitles">
+            <div class="settings-category" id="settings-subtitles" data-settings-category="subtitles"${CONFIG.MNGTV.ONLINE_SUBTITLES ? '' : ' hidden'}>
               <div class="settings-section">
                 <h3 class="settings-section-title">${t('settings.onlineSubtitles')}</h3>
                 <div class="settings-item">
@@ -1004,6 +1004,7 @@ export class Settings {
                 </div>
               </div>
             </div>
+
 
             <div class="settings-category" id="settings-advanced"
                  data-settings-category="advanced">

@@ -248,6 +248,7 @@ beforeEach(() => {
   player.init(video);
 });
 afterEach(() => {
+  CONFIG.MNGTV.STAY_ON_CHANNEL = true;
   Focus.uninstall();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -732,6 +733,7 @@ describe('Player live playback', () => {
   });
 
   it('coalesces errors and reconnects the same channel before advancing', async () => {
+    CONFIG.MNGTV.STAY_ON_CHANNEL = false;
     playlistMock.channels = [{}, {}];
     HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
     HTMLMediaElement.prototype.pause = vi.fn();
@@ -789,7 +791,31 @@ describe('Player live playback', () => {
     expect(container.querySelector('#player-osd')?.textContent).not.toContain('Reconnecting');
   });
 
+  it('mngtv: stays on the channel and reloads instead of advancing', async () => {
+    playlistMock.channels = [{}, {}];
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
+    HTMLMediaElement.prototype.pause = vi.fn();
+    HTMLMediaElement.prototype.load = vi.fn();
+    video = document.createElement('video');
+    container.appendChild(video);
+    player.init(video);
+    vi.mocked(StorageService.getLiveReconnectAttempts).mockReturnValue(0);
+    player.play(0);
+    await flush();
+    playlistMock.getByIndex.mockClear();
+    video.dispatchEvent(new Event('error'));
+    vi.advanceTimersByTime(2000);
+    expect(healthMock.recordPlaybackFailure).toHaveBeenCalledWith(CHANNEL, 'playback_error');
+    const fresh = container.querySelector('video');
+    expect(fresh).not.toBeNull();
+    expect(fresh).not.toBe(video);
+    vi.advanceTimersByTime(CONFIG.MNGTV.RETRY_DELAY_MS);
+    expect(container.querySelector('video')).toBe(fresh);
+    expect(playlistMock.getByIndex).not.toHaveBeenCalled();
+  });
+
   it('honors a disabled retry limit and skips reconnect for unsupported sources', async () => {
+    CONFIG.MNGTV.STAY_ON_CHANNEL = false;
     playlistMock.channels = [{}, {}];
     vi.mocked(StorageService.getLiveReconnectAttempts).mockReturnValueOnce(0);
     player.play(0);

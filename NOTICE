@@ -1,0 +1,7 @@
+mngtv player
+Copyright 2026 Serkan Karabiber
+
+This product is a fork of webOS IPTV Player (https://github.com/lennylxx/webos-iptv-player),
+Copyright lennylxx, licensed under the Apache License, Version 2.0.
+Changes: rebrand (tr.mngtv.player), stay-on-channel playback recovery for the mngtv
+server (Dispatcharr), online subtitle search hidden, mngtv icons.

@@ -300,14 +300,13 @@ describe('Settings.render', () => {
       'Program Guide',
       'Appearance',
       'Playback',
-      'Online Subtitles',
       'Advanced',
       'Data Management',
     ]);
     const navOrder = Array.from(container.querySelectorAll<HTMLElement>('.settings-nav-item'))
       .map(item => item.dataset.settingsTarget);
     const contentOrder = Array.from(
-      container.querySelectorAll<HTMLElement>('.settings-scroll > .settings-category'),
+      container.querySelectorAll<HTMLElement>('.settings-scroll > .settings-category:not([hidden])'),
     ).map(item => item.dataset.settingsCategory);
     expect(contentOrder).toEqual(navOrder);
     expect(container.querySelector('.settings-nav-item.active')?.getAttribute('data-settings-target'))
@@ -1850,7 +1849,7 @@ describe('Settings.handleAction', () => {
   it('brings a picked category to the top of the pane and marks it', () => {
     settings.render();
     const main = container.querySelector<HTMLElement>('.settings-scroll')!;
-    const target = container.querySelector<HTMLElement>('#settings-subtitles')!;
+    const target = container.querySelector<HTMLElement>('#settings-advanced')!;
     let scrolled = 0;
     Object.defineProperty(main, 'scrollTop', {
       configurable: true, get: () => scrolled, set: (v: number) => { scrolled = v; },
@@ -1860,11 +1859,11 @@ describe('Settings.handleAction', () => {
     main.getBoundingClientRect = () => ({ top: 0 } as DOMRect);
     target.getBoundingClientRect = () => ({ top: 300 - scrolled } as DOMRect);
 
-    click('[data-settings-target="subtitles"]');
+    click('[data-settings-target="advanced"]');
 
     expect(target.getBoundingClientRect().top).toBe(main.getBoundingClientRect().top);
     expect(container.querySelector('.settings-nav-item.active')?.getAttribute('data-settings-target'))
-      .toBe('subtitles');
+      .toBe('advanced');
   });
 
   it('updates the weak active category when content scrolling reaches the bottom', async () => {

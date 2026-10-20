@@ -204,6 +204,13 @@ export class Player {
           `cause=${recovery.cause}`,
           this.recoveryState(recovery));
         this.markLiveUnavailable(recovery.cause === 'stall' ? 'stall_exhausted' : 'playback_error');
+        if (CONFIG.MNGTV.STAY_ON_CHANNEL && this.liveSessionActive && !this.catchupInfo) {
+          // mngtv: kanalda kal; sunucu akisi degistirir, biz ayni adresi yeniden yukleriz.
+          this.osd.updateMessage(t('player.reconnecting'));
+          this.stallWatchdog.start(isWebOS(), StorageService.getLiveReconnectAttempts());
+          this.reloadCurrentStream();
+          return;
+        }
         this.osd.updateMessage(t('player.streamError'));
         this.channelUp();
       },
@@ -1070,6 +1077,15 @@ export class Player {
     }
     this.stallWatchdog.stop();
     this.markLiveUnavailable('playback_error');
+    if (CONFIG.MNGTV.STAY_ON_CHANNEL && this.liveSessionActive && !this.catchupInfo) {
+      this.osd.updateMessage(t('player.reconnecting'));
+      this.errorAdvanceTimer = setTimeout(() => {
+        this.errorAdvanceTimer = null;
+        this.stallWatchdog.start(isWebOS(), StorageService.getLiveReconnectAttempts());
+        this.reloadCurrentStream();
+      }, CONFIG.MNGTV.RETRY_DELAY_MS);
+      return;
+    }
     this.osd.updateMessage(t('player.streamError'));
     this.errorAdvanceTimer = setTimeout(() => {
       this.errorAdvanceTimer = null;

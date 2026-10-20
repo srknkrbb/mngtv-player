@@ -1,3 +1,11 @@
+# mngtv player
+
+LG webOS icin mngtv oynaticisi; [webOS IPTV Player](https://github.com/lennylxx/webos-iptv-player) catalidir (Apache-2.0, bkz. NOTICE).
+
+mngtv farklari: kanal degisimi sunucu tarafinda yapilir (oynatici kanalda kalir ve yeniden yukler), cevrimici altyazi aramasi gizli, uygulama kimligi `tr.mngtv.player`.
+
+---
+
 <div align="center">
   <img src="assets/icon.svg" alt="webOS IPTV Player icon">
   <h1>webOS IPTV Player</h1>

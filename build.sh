@@ -74,9 +74,9 @@ if [ "$1" = "--install" ]; then
   # relaunch resumes that stale in-memory copy — so close after installing, then
   # cold-start so the new bundle loads.
   info "Terminating stale instance..."
-  ares-launch --device "$DEVICE" --close com.lennylxx.iptv 2>/dev/null || true
+  ares-launch --device "$DEVICE" --close tr.mngtv.player 2>/dev/null || true
   sleep 1
   info "Launching..."
-  ares-launch --device "$DEVICE" com.lennylxx.iptv
+  ares-launch --device "$DEVICE" tr.mngtv.player
   info "Done! App is running on $DEVICE"
 fi

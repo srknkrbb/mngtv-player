@@ -1,9 +1,17 @@
 export const CONFIG = {
   APP_ID: __APP_ID__ as string,
-  APP_NAME: 'webOS IPTV Player',
+  APP_NAME: 'mngtv',
   VERSION: __APP_VERSION__ as string,
 
   STORAGE_PREFIX: 'iptv_',
+
+  // mngtv: kanal degisimi sunucu tarafinda (Dispatcharr + health) yapilir; oynatici
+  // kanalda kalir ve ayni adresi yeniden yukler. Cevrimici altyazi aramasi kapali.
+  MNGTV: {
+    STAY_ON_CHANNEL: true as boolean,
+    ONLINE_SUBTITLES: false,
+    RETRY_DELAY_MS: 3000,
+  },
 
   // Versioned channel customization record (order, display, grouping, and EPG overrides).
   // Bump when its shape changes so an older payload is ignored, not misapplied.
@@ -51,7 +59,7 @@ export const CONFIG = {
     SEEK_STEP: 30,              // seconds per Left/Right press while seeking catch-up or live DVR
     HLS_MAX_RECOVERIES: 3,      // bounded hls.js fatal-error retries before giving up → next channel
     STALL_POLL_MS: 2000,        // native stall watchdog: currentTime poll interval
-    STALL_FREEZE_TICKS: 5,      // ~10s frozen before the first in-place reload
+    STALL_FREEZE_TICKS: 10,     // ~20s frozen before the first in-place reload (mngtv: sunucu tarafi gecise firsat)
     DEFAULT_LIVE_RECONNECT_ATTEMPTS: 3, // reconnect attempts before switching channels
     STARTUP_POLL_MS: 500,       // startup watchdog: readyState/networkState poll interval
     STARTUP_TIMEOUT: 15000,     // ms a stream may load without a frame before it counts as failed
