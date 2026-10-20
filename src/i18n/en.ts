@@ -507,6 +507,19 @@ export const EN_MESSAGES = {
   'liveCategories.loadError': 'Couldn\'t load categories.',
   'liveCategories.tryAgain': 'Try again',
   'liveCategories.settingsHint': 'Load only the categories you select. Fewer categories load faster.',
+  // mngtv: Gunun Maclari
+  'nav.matches': 'Matches',
+  'matches.title': 'Today\'s Matches',
+  'matches.summary': '{count} matches, {live} live now',
+  'matches.now': 'Live now',
+  'matches.upcoming': 'Upcoming',
+  'matches.ended': 'Finished',
+  'matches.until': 'until {time}',
+  'matches.world': 'World',
+  'matches.endedBadge': 'ENDED',
+  'matches.upcomingBadge': 'SOON',
+  'matches.empty': 'No matches listed today.',
+  'matches.emptyHint': 'The mngtv server fills this list from the day\'s fixtures; check again later.',
 } as const;
 
 export type MessageKey = keyof typeof EN_MESSAGES;

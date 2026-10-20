@@ -491,4 +491,17 @@ export const TR_MESSAGES = {
   'liveCategories.loadError': 'Kategoriler yüklenemedi.',
   'liveCategories.tryAgain': 'Tekrar dene',
   'liveCategories.settingsHint': 'Yalnızca seçtiğiniz kategoriler yüklenir. Daha az kategori daha hızlı yüklenir.',
+  // mngtv: Gunun Maclari
+  'nav.matches': 'Maçlar',
+  'matches.title': 'Günün Maçları',
+  'matches.summary': '{count} maç, {live} tanesi şu an canlı',
+  'matches.now': 'Şu an canlı',
+  'matches.upcoming': 'Yaklaşan',
+  'matches.ended': 'Biten',
+  'matches.until': '{time}\'e kadar',
+  'matches.world': 'Dünya',
+  'matches.endedBadge': 'BİTTİ',
+  'matches.upcomingBadge': 'YAKINDA',
+  'matches.empty': 'Bugün listede maç yok.',
+  'matches.emptyHint': 'mngtv sunucusu bu listeyi günün fikstüründen doldurur; daha sonra tekrar bakın.',
 } as const satisfies MessageCatalog;

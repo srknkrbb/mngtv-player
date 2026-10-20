@@ -491,4 +491,17 @@ export const ZH_CN_MESSAGES = {
   'liveCategories.loadError': '无法加载分类。',
   'liveCategories.tryAgain': '重试',
   'liveCategories.settingsHint': '只加载选中的分类。分类越少，加载越快。',
+  // mngtv: Gunun Maclari
+  'nav.matches': 'Matches',
+  'matches.title': 'Today\'s Matches',
+  'matches.summary': '{count} matches, {live} live now',
+  'matches.now': 'Live now',
+  'matches.upcoming': 'Upcoming',
+  'matches.ended': 'Finished',
+  'matches.until': 'until {time}',
+  'matches.world': 'World',
+  'matches.endedBadge': 'ENDED',
+  'matches.upcomingBadge': 'SOON',
+  'matches.empty': 'No matches listed today.',
+  'matches.emptyHint': 'The mngtv server fills this list from the day\'s fixtures; check again later.',
 } satisfies MessageCatalog;

@@ -28,6 +28,7 @@ type SearchCollapseReason = 'toggle' | 'back' | 'escape' | 'dismiss' | 'hidden' 
 // to, and whether it needs an Xtream account.
 export const SECTIONS = [
   { id: 'live', labelKey: 'nav.live', view: 'channels', xtreamOnly: false },
+  { id: 'matches', labelKey: 'nav.matches', view: 'matches', xtreamOnly: false }, // mngtv: Gunun Maclari
   { id: 'epg', labelKey: 'nav.epg', view: 'epg', xtreamOnly: false },
   { id: 'movies', labelKey: 'nav.movies', view: 'movies', xtreamOnly: true },
   { id: 'series', labelKey: 'nav.series', view: 'series', xtreamOnly: true },
@@ -156,9 +157,10 @@ export class TabBar {
     if (this._shown) this.render();
   }
 
-  setSections(hasXtream: boolean): void {
+  /** mngtv: 'matches' sekmesi yalniz listede Gunun Maclari grubu varsa gosterilir. */
+  setSections(hasXtream: boolean, hasMatches = false): void {
     this.hasXtream = hasXtream;
-    this.sections = hasXtream ? FULL_SECTIONS : LITE_SECTIONS;
+    this.sections = (hasXtream ? FULL_SECTIONS : LITE_SECTIONS).filter((s) => s.id !== 'matches' || hasMatches);
     if (!this.sections.some((s) => s.id === this.active)) this.active = 'live';
     this.focusIndex = Math.max(0, this.sections.findIndex((s) => s.id === this.active));
     if (this._shown) this.render();

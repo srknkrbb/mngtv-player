@@ -63,10 +63,11 @@ import type {
 } from './types';
 import { getLocale, initLocale, resolveLocale, setLocale, t, tp } from './i18n';
 import { MngtvSync, mngtvTelemetry } from './services/mngtv';
+import { MatchesView, isMatchGroup } from './components/matches-view';
 
 const log = createLogger('App');
 
-type ViewName = 'channels' | 'player' | 'epg' | 'settings' | 'parental-controls' | 'reminders'
+type ViewName = 'channels' | 'player' | 'epg' | 'settings' | 'parental-controls' | 'reminders' | 'matches'
   | 'loading' | 'movies' | 'series' | 'search';
 
 class App {
@@ -88,6 +89,7 @@ class App {
   private menu!: PlayerMenu;
   private reminderPrompt = new ReminderPrompt();
   private reminderManager!: ReminderManager;
+  private matchesView!: MatchesView;
   private reminderManagerOrigin: 'settings' | 'epg' = 'settings';
   private tabBar!: TabBar;
   private search!: Search;
@@ -135,6 +137,7 @@ class App {
       settings: $('#view-settings')!,
       'parental-controls': $('#view-parental-controls')!,
       reminders: $('#view-reminders')!,
+      matches: $('#view-matches')!,
       movies: $('#view-movies')!,
       series: $('#view-series')!,
       search: $('#view-search')!,
@@ -197,6 +200,11 @@ class App {
       (idx, catchup, scope) => this.playChannel(idx, catchup, scope),
       () => this.leaveUp(),
       () => this.openReminderManager('epg'),
+    );
+    this.matchesView = new MatchesView(
+      this.views.matches,
+      (idx) => { this.tabBar.blur(); this.playChannel(idx); },
+      () => { this.matchesView.deactivate(); this.channelList.render(); this.showView('channels'); },
     );
     this.reminderManager = new ReminderManager(this.views.reminders, () => {
       if (this.reminderManagerOrigin === 'epg') {
@@ -878,7 +886,7 @@ class App {
       const xtreamAccounts = playlists
         .filter((playlist) =>
           playlist.source === 'xtream' && playlist.xtream && isSourceEnabled(playlist));
-      this.tabBar.setSections(xtreamAccounts.length > 0);
+      this.tabBar.setSections(xtreamAccounts.length > 0, this.hasMatchGroup());
       this.tabBar.setAccounts(xtreamAccounts, this.activeXtreamAccount()?.id ?? '');
       this.channelList.render();
       this.sidebar.refresh();
@@ -951,7 +959,7 @@ class App {
 
       const hasXtream = StorageService.getPlaylists()
         .some((p) => p.source === 'xtream' && isSourceEnabled(p));
-      this.tabBar.setSections(hasXtream);
+      this.tabBar.setSections(hasXtream, this.hasMatchGroup());
       const xtreamAccounts = StorageService.getPlaylists()
         .filter((p) => p.source === 'xtream' && p.xtream && isSourceEnabled(p));
       this.tabBar.setAccounts(xtreamAccounts, this.activeXtreamAccount()?.id ?? '');
@@ -1118,6 +1126,12 @@ class App {
       return;
     }
     this.player.stop();
+    if (section !== 'matches') this.matchesView.deactivate();
+    if (section === 'matches') {
+      this.showView('matches');
+      this.matchesView.open();
+      return;
+    }
     if (section === 'epg') { this.openEpg(); return; }
     if (section === 'movies') {
       this.showView('movies');
@@ -1260,9 +1274,14 @@ class App {
     });
   }
 
+  private hasMatchGroup(): boolean {
+    return PlaylistService.channels.some((c) => isMatchGroup(c.group));
+  }
+
   private refreshEpgDependentViews(): void {
     this.applyDisplayTz();
     this.channelList.render();
+    this.matchesView.refresh();
     this.livePreview.refresh();
     void this.search.refreshPrograms();
     this.searchPrewarm.schedule('epg');
@@ -1558,6 +1577,7 @@ class App {
       series: this.series.focusScope,
       search: this.search.focusScope,
       reminders: this.reminderManager.focusScope,
+      matches: this.matchesView.focusScope,
     };
     for (const name of Object.keys(this.views) as ViewName[]) {
       views.set(name, own[name]
@@ -1762,6 +1782,9 @@ class App {
         break;
       case 'reminders':
         this.reminderManager.handleAction(action);
+        break;
+      case 'matches':
+        if (!this.matchesView.handleAction(action) && action === 'up') this.leaveUp();
         break;
     }
   }

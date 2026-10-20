@@ -505,4 +505,17 @@ export const PT_BR_MESSAGES = {
   'liveCategories.loadError': 'Não foi possível carregar as categorias.',
   'liveCategories.tryAgain': 'Tentar novamente',
   'liveCategories.settingsHint': 'Só as categorias selecionadas são carregadas. Menos categorias carregam mais rápido.',
+  // mngtv: Gunun Maclari
+  'nav.matches': 'Matches',
+  'matches.title': 'Today\'s Matches',
+  'matches.summary': '{count} matches, {live} live now',
+  'matches.now': 'Live now',
+  'matches.upcoming': 'Upcoming',
+  'matches.ended': 'Finished',
+  'matches.until': 'until {time}',
+  'matches.world': 'World',
+  'matches.endedBadge': 'ENDED',
+  'matches.upcomingBadge': 'SOON',
+  'matches.empty': 'No matches listed today.',
+  'matches.emptyHint': 'The mngtv server fills this list from the day\'s fixtures; check again later.',
 } satisfies MessageCatalog;
