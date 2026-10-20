@@ -7,6 +7,7 @@
 //    uc noktalari vermiyorsa (404) sessizce kapanir.
 import { CONFIG } from '../config';
 import { StorageService } from './storage-service';
+import { PlaylistService } from './playlist-service';
 import { createLogger } from '../utils/logger';
 import { normalizeXtreamBaseUrl, xtreamCredentialsFromLiveUrl, type XtreamCredentials } from '../utils/xtream-url';
 
@@ -29,6 +30,7 @@ interface QueuedEvent {
 interface VersionDoc {
   playlist?: string;
   epg?: string;
+  generated?: number;   // epoch saniye
   app?: { version?: string; min?: string };
 }
 
@@ -97,10 +99,20 @@ export class MngtvSync {
         if (!doc) continue;
         const prev = known[base];
         known[base] = { playlist: doc.playlist, epg: doc.epg };
-        if (prev && (prev.playlist !== doc.playlist || prev.epg !== doc.epg)) {
-          log.info('Server list changed; refreshing', 'event=mngtv.version.changed',
-            `playlist=${String(prev.playlist)}>${String(doc.playlist)}`, `epg=${String(prev.epg)}>${String(doc.epg)}`);
-          changed = true;
+        if (prev) {
+          if (prev.playlist !== doc.playlist || prev.epg !== doc.epg) {
+            log.info('Server list changed; refreshing', 'event=mngtv.version.changed',
+              `playlist=${String(prev.playlist)}>${String(doc.playlist)}`, `epg=${String(prev.epg)}>${String(doc.epg)}`);
+            changed = true;
+          }
+        } else {
+          // Ilk karsilastirma: onbellekteki liste sunucunun son uretiminden eskiyse yenile
+          // (uygulama kapaliyken sunucu degismis olabilir).
+          const last = PlaylistService.lastRefreshMs;
+          if (doc.generated && last !== null && doc.generated * 1000 > last) {
+            log.info('Cached list older than server; refreshing', 'event=mngtv.version.stale');
+            changed = true;
+          }
         }
       }
       this.remember(known);

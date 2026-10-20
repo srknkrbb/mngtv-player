@@ -504,4 +504,9 @@ export const ZH_CN_MESSAGES = {
   'matches.upcomingBadge': 'SOON',
   'matches.empty': 'No matches listed today.',
   'matches.emptyHint': 'The mngtv server fills this list from the day\'s fixtures; check again later.',
+  'matches.noLive': 'No match is live right now.',
+  'matches.noUpcoming': 'No upcoming matches in the next 24 hours.',
+  'matches.noEnded': 'Nothing finished recently.',
+  'matches.yesterday': 'Yesterday',
+  'matches.reminder': 'Remind me',
 } satisfies MessageCatalog;

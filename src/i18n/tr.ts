@@ -504,4 +504,9 @@ export const TR_MESSAGES = {
   'matches.upcomingBadge': 'YAKINDA',
   'matches.empty': 'Bugün listede maç yok.',
   'matches.emptyHint': 'mngtv sunucusu bu listeyi günün fikstüründen doldurur; daha sonra tekrar bakın.',
+  'matches.noLive': 'Şu an canlı maç yok.',
+  'matches.noUpcoming': 'Önümüzdeki 24 saatte maç görünmüyor.',
+  'matches.noEnded': 'Yakın zamanda biten maç yok.',
+  'matches.yesterday': 'Dün',
+  'matches.reminder': 'Hatırlat',
 } as const satisfies MessageCatalog;

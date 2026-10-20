@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('./playlist-service', () => ({
+  PlaylistService: { lastRefreshMs: 1_000_000 },
+}));
+
 vi.mock('./storage-service', () => ({
   StorageService: {
     getPlaylists: vi.fn(() => [
@@ -47,6 +51,17 @@ describe('mngtv sync', () => {
     fetchMock.mockResolvedValueOnce(response(200, { playlist: 'bbb', epg: 'e2' }));
     await again.poll();
     expect(onChanged).toHaveBeenCalledTimes(2);
+  });
+
+  it('ilk karsilastirmada onbellek sunucudan eskiyse yeniler', async () => {
+    const onChanged = vi.fn(async () => undefined);
+    const sync = new MngtvSync(onChanged);
+    fetchMock.mockResolvedValueOnce(response(200, { playlist: 'aaa', epg: 'e1', generated: 2_000 }));
+    await sync.poll();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    fetchMock.mockResolvedValueOnce(response(200, { playlist: 'aaa', epg: 'e1', generated: 3_000 }));
+    await sync.poll();
+    expect(onChanged).toHaveBeenCalledTimes(1); // ozet ayni: uretim zamani tek basina yeniletmez
   });
 
   it('404 donen sunucu bir sure sorulmaz; yalniz Xtream hesaplari sorulur', async () => {

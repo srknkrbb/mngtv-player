@@ -228,6 +228,11 @@ class PlaylistServiceImpl {
     return sources.length > 0 && !sources.some(isSourceEnabled);
   }
 
+  /** mngtv: listenin en son yuklendigi/yenilendigi zaman (onbellekten geldiyse onbellek zamani). */
+  get lastRefreshMs(): number | null {
+    return this.refreshTimestamp;
+  }
+
   getNextRefreshDelayMs(intervalMs: number): number {
     if (this.refreshTimestamp === null) return 0;
     return Math.max(0, this.refreshTimestamp + intervalMs - Date.now());

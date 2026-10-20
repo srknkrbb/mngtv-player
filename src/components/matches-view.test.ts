@@ -22,8 +22,8 @@ describe('Gunun Maclari satirlari', () => {
     ch('(15:30) Eski Mac TRT', 'TURKIYE GUNUN MACLARI'),
   ];
   const epg = new Map<string, Programme[]>([
-    ['(14:00) Angers-Marseille Bein Connect 4', [prog('Angers - Marseille', now - H, now + H)]],
-    ['(19:25) Monza-Cagliari S Sport Plus', [prog('Monza - Cagliari', now + 4.4 * H, now + 6.4 * H)]],
+    ['(14:00) Angers-Marseille Bein Connect 4', [prog('CANLI: Angers - Marseille | Bein Connect 4', now - H, now + H)]],
+    ['(19:25) Monza-Cagliari S Sport Plus', [prog('Monza - Cagliari | S Sport Plus (saat 19:25)', now - 2 * H, now + 4.4 * H), prog('CANLI: Monza - Cagliari | S Sport Plus', now + 4.4 * H, now + 6.4 * H)]],
     ['(12:00) Lille-Nice Bein Connect 2', [prog('Lille - Nice (sona erdi)', now - 3 * H, now + 16 * H)]],
   ]);
 
@@ -36,7 +36,7 @@ describe('Gunun Maclari satirlari', () => {
       ['Monza-Cagliari S Sport Plus', 'upcoming'],
       ['Lille-Nice Bein Connect 2', 'ended'],
     ]);
-    expect(rows[0].programme?.title).toBe('Angers - Marseille');
+    expect(rows[0].programme?.title).toBe('CANLI: Angers - Marseille | Bein Connect 4');
     expect(rows[0].index).toBe(1);
     expect(rows.find(r => r.title.startsWith('Ajax'))?.world).toBe(true);
   });

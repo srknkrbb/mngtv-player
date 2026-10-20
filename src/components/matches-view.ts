@@ -1,17 +1,21 @@
 // mngtv: Gunun Maclari gorunumu (C asamasi). Sunucunun "GUNUN MACLARI" gruplarindaki
-// kanallari (her mac x yayin kanali) zamana gore listeler; EPG'den CANLI / yaklasan /
-// bitti durumunu cikarir. Secim = kanali oynat. Sunucuda grup yoksa bos durum gosterir.
+// kanallari (her mac x yayin kanali; kayan 24 saatlik pencere) uc sutunda gosterir:
+// CANLI | YAKLASAN (hatirlatici eklenebilir) | BITEN (dar, sade). Saatler cihazin saat
+// dilimindedir (uygulamanin EPG saat dilimi ayarindan bagimsiz). Secim = kanali oynat.
 import type { Action, Channel, Programme } from '../types';
 import { CONFIG } from '../config';
 import { SpatialNav } from '../navigation/spatial-nav';
 import { Focus, type FocusScope } from '../navigation/focus-scope';
 import { PlaylistService } from '../services/playlist-service';
 import { EpgService } from '../services/epg-service';
-import { html } from '../utils/dom';
+import { ReminderService } from '../services/reminder-service';
+import { channelKey } from '../utils/channel';
+import { html, raw } from '../utils/dom';
 import { morph } from '../utils/morph';
-import { formatTime } from '../utils/time';
 import { t } from '../i18n';
 import { liveBadge } from './live-badge';
+import { bellIcon } from './icons';
+import { showToast } from './toast';
 
 export type MatchStatus = 'live' | 'upcoming' | 'ended';
 
@@ -27,12 +31,39 @@ export interface MatchRow {
 }
 
 const TIME_PREFIX = /^\((\d{1,2})[:.](\d{2})\)\s*/;
-// Sunucu biten mac icin gun sonuna kadar "... (sona erdi)" dolgu programi yazar; bu CANLI degil BITTI'dir.
+// Sunucu biten mac icin "... (sona erdi)" dolgu programi yazar; bu CANLI degil BITTI'dir.
 const ENDED_TITLE = /\(sona erdi\)|\(ended\)|\(bitti\)/i;
+const PRE_TITLE = /\(saat \d{1,2}[:.]\d{2}\)\s*$/i;
+const LIVE_PREFIX = /^CANLI:\s*/i;
 const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000;
 
 export function isMatchGroup(group: string): boolean {
   return CONFIG.MNGTV.MATCHES.GROUP_RE.test(group || '');
+}
+
+/** Cihazin saat diliminde HH:MM (EPG saat dilimi ayarindan bagimsiz). */
+export function localTime(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function sameLocalDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/** Bir kanalin EPG'sinden macin kendisini (CANLI: ...) ve zamanini cikarir. */
+function matchProgramme(list: Programme[], now: number): { programme: Programme | null; start: Date | null; end: Date | null; ended: boolean } {
+  const live = list.filter(p => LIVE_PREFIX.test(p.title)).sort((a, b) => a.start.getTime() - b.start.getTime());
+  if (live.length) {
+    const p = live.find(x => x.stop.getTime() > now) ?? live[live.length - 1];
+    return { programme: p, start: p.start, end: p.stop, ended: p.stop.getTime() <= now };
+  }
+  const current = list.find(p => p.start.getTime() <= now && p.stop.getTime() > now) ?? null;
+  if (current && ENDED_TITLE.test(current.title)) return { programme: current, start: null, end: null, ended: true };
+  if (current && !PRE_TITLE.test(current.title)) return { programme: current, start: current.start, end: current.stop, ended: false };
+  const next = list.filter(p => p.start.getTime() > now && !ENDED_TITLE.test(p.title) && !PRE_TITLE.test(p.title))
+    .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
+  if (next) return { programme: next, start: next.start, end: next.stop, ended: false };
+  return { programme: current, start: null, end: null, ended: false };
 }
 
 /** Saf: kanal listesi + EPG -> satirlar (zamana gore). Testlenebilir. */
@@ -46,39 +77,31 @@ export function buildMatchRows(
     if (!isMatchGroup(channel.group)) return;
     const m = TIME_PREFIX.exec(channel.name);
     const title = m ? channel.name.slice(m[0].length) : channel.name;
-    let start: Date | null = null;
-    let end: Date | null = null;
-    let programme: Programme | null = null;
-    const list = programmesOf(channel) ?? [];
-    // Kanalin suanki ya da bir sonraki programi (mac); gecmis program yalnizca baska yoksa
-    const current = list.find(p => p.start.getTime() <= now && p.stop.getTime() > now);
-    const next = list.filter(p => p.start.getTime() > now).sort((a, b) => a.start.getTime() - b.start.getTime())[0];
-    const last = list.filter(p => p.stop.getTime() <= now).sort((a, b) => b.stop.getTime() - a.stop.getTime())[0];
-    programme = current ?? next ?? last ?? null;
-    const endedFiller = !!programme && ENDED_TITLE.test(programme.title);
-    if (programme && !endedFiller) {
-      start = programme.start;
-      end = programme.stop;
-    } else if (m) {
-      // Ad onekindeki saat sunucunun saat dilimindedir (Turkiye, +03:00); mutlak zamana cevrilir,
-      // gosterim uygulamanin saat dilimi ayariyla yapilir.
+    const epg = matchProgramme(programmesOf(channel) ?? [], now);
+    let { start, end } = epg;
+    if (!start && m) {
+      // Ad onekindeki saat sunucunun saat dilimindedir (Turkiye, +03:00); mutlak zamana cevrilir.
       const off = CONFIG.MNGTV.MATCHES.NAME_TZ_OFFSET_MIN * 60000;
       const day = new Date(now + off);
       start = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), Number(m[1]), Number(m[2])) - off);
+      // Pencere simdi-3 sa ... +21 sa: 3 saatten eski bir saat ancak yarinin macidir
+      if (!epg.ended && start.getTime() < now - 3 * 3600 * 1000) start = new Date(start.getTime() + 86400000);
       end = new Date(start.getTime() + DEFAULT_DURATION_MS);
     }
-    const status: MatchStatus = endedFiller
+    const status: MatchStatus = epg.ended
       ? 'ended'
       : !start || !end
-      ? 'upcoming'
-      : start.getTime() <= now && end.getTime() > now
-        ? 'live'
-        : start.getTime() > now ? 'upcoming' : 'ended';
-    rows.push({ channel, index, title, start, end, status, programme, world: /DUNYA|WORLD/i.test(channel.group) });
+        ? 'upcoming'
+        : start.getTime() <= now && end.getTime() > now
+          ? 'live'
+          : start.getTime() > now ? 'upcoming' : 'ended';
+    rows.push({ channel, index, title, start, end, status, programme: epg.programme, world: /DUNYA|WORLD/i.test(channel.group) });
   });
   const order: Record<MatchStatus, number> = { live: 0, upcoming: 1, ended: 2 };
   rows.sort((a, b) => order[a.status] - order[b.status]
-    || (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0)
+    || (a.status === 'ended'
+      ? (b.end?.getTime() ?? 0) - (a.end?.getTime() ?? 0)          // bitenler: en son biten ustte
+      : (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0))
     || Number(a.world) - Number(b.world)
     || a.index - b.index);
   return rows;
@@ -173,10 +196,10 @@ export class MatchesView {
         </header>
         ${rows.length
           ? html`
-            <div class="matches-list">
-              ${this.section('matches.now', live)}
-              ${this.section('matches.upcoming', upcoming)}
-              ${this.section('matches.ended', ended)}
+            <div class="matches-columns">
+              ${this.column('live', t('matches.now'), live, t('matches.noLive'), now)}
+              ${this.column('upcoming', t('matches.upcoming'), upcoming, t('matches.noUpcoming'), now)}
+              ${this.column('ended', t('matches.ended'), ended, t('matches.noEnded'), now)}
             </div>`
           : html`
             <div class="matches-empty">
@@ -191,54 +214,93 @@ export class MatchesView {
     }
   }
 
-  private section(labelKey: 'matches.now' | 'matches.upcoming' | 'matches.ended', rows: MatchRow[]) {
-    if (!rows.length) return '';
+  private column(status: MatchStatus, label: string, rows: MatchRow[], emptyText: string, now: number) {
     return html`
-      <section class="matches-section" data-status="${rows[0].status}">
+      <section class="matches-column matches-column-${status}" data-status="${status}">
         <div class="matches-section-heading">
-          <strong>${t(labelKey)}</strong>
+          <strong>${label}</strong>
           <span>${rows.length}</span>
-          <div class="matches-section-line"></div>
         </div>
         <div class="matches-rows">
-          ${rows.map(row => this.row(row))}
+          ${rows.length ? rows.map(row => this.row(row, now)) : html`<p class="matches-column-empty">${emptyText}</p>`}
         </div>
       </section>
     `;
   }
 
-  private row(row: MatchRow) {
-    const time = row.start ? formatTime(row.start) : '--:--';
-    const endTime = row.end ? formatTime(row.end) : '';
+  private row(row: MatchRow, now: number) {
+    const time = row.start ? localTime(row.start) : '--:--';
+    const endTime = row.end ? localTime(row.end) : '';
+    const today = new Date(now);
+    const dayLabel = row.start && !sameLocalDay(row.start, today)
+      ? (row.start.getTime() > now ? t('common.tomorrow') : t('matches.yesterday'))
+      : '';
+    const key = `ch:${row.index}`;
+    const reminder = row.status === 'upcoming' && row.start && row.end
+      ? ReminderService.has(channelKey(row.channel), row.start.getTime())
+      : null;
     return html`
-      <button class="matches-row matches-row-${row.status}" data-focusable data-key="ch:${row.index}"
-              data-match-index="${row.index}">
-        <time class="matches-time">${time}</time>
-        <div class="matches-details">
-          <div class="matches-title">${row.title}</div>
-          <div class="matches-meta">
-            ${row.programme ? html`<span>${row.programme.title.replace(ENDED_TITLE, '').trim()}</span>` : ''}
-            ${endTime && row.status !== 'ended' ? html`<span class="matches-end">${t('matches.until', { time: endTime })}</span>` : ''}
-            ${row.world ? html`<span class="matches-world">${t('matches.world')}</span>` : ''}
+      <div class="matches-row matches-row-${row.status}" data-row-key="${key}">
+        <button class="matches-main" data-focusable data-key="${key}" data-match-index="${row.index}" data-match-action="play">
+          <time class="matches-time">${time}${dayLabel ? html`<small>${dayLabel}</small>` : ''}</time>
+          <div class="matches-details">
+            <div class="matches-title">${row.title}</div>
+            <div class="matches-meta">
+              ${row.status !== 'ended' && endTime ? html`<span class="matches-end">${t('matches.until', { time: endTime })}</span>` : ''}
+              ${row.world ? html`<span class="matches-world">${t('matches.world')}</span>` : ''}
+            </div>
           </div>
-        </div>
-        <div class="matches-status">
-          ${row.status === 'live'
-            ? liveBadge('matches-live')
-            : row.status === 'ended'
-              ? html`<span class="matches-badge matches-badge-ended">${t('matches.endedBadge')}</span>`
-              : html`<span class="matches-badge matches-badge-upcoming">${t('matches.upcomingBadge')}</span>`}
-        </div>
-      </button>
+          <div class="matches-status">
+            ${row.status === 'live'
+              ? liveBadge('matches-live')
+              : row.status === 'ended'
+                ? html`<span class="matches-badge matches-badge-ended">${t('matches.endedBadge')}</span>`
+                : ''}
+          </div>
+        </button>
+        ${reminder !== null
+          ? html`<button class="matches-bell ${reminder ? 'set' : ''}" data-focusable data-key="bell:${row.index}"
+                         data-match-index="${row.index}" data-match-action="reminder"
+                         title="${t('matches.reminder')}">${raw(bellIcon(reminder))}</button>`
+          : ''}
+      </div>
     `;
   }
 
   private activate(control: HTMLElement): void {
     const index = Number(control.dataset.matchIndex);
-    if (Number.isFinite(index)) this.onPlay(index);
+    if (!Number.isFinite(index)) return;
+    if (control.dataset.matchAction === 'reminder') {
+      this.toggleReminder(index);
+      return;
+    }
+    this.onPlay(index);
+  }
+
+  private toggleReminder(index: number): void {
+    const row = this.rows().find(r => r.index === index);
+    if (!row?.start || !row.end) return;
+    const key = channelKey(row.channel);
+    const startMs = row.start.getTime();
+    if (ReminderService.has(key, startMs)) {
+      ReminderService.remove(key, startMs);
+      showToast(t('epg.reminderRemoved'));
+    } else {
+      ReminderService.add({
+        channelKey: key,
+        channelName: row.channel.name,
+        playlistIds: row.channel.playlistIds.slice(),
+        epgSourceUrl: EpgService.getSourceUrl(row.channel) ?? undefined,
+        title: row.programme?.title.replace(LIVE_PREFIX, '') ?? row.title,
+        startMs,
+        stopMs: row.end.getTime(),
+      });
+      showToast(t('epg.reminderSet'));
+    }
+    this.render();
   }
 
   private focusFirst(): void {
-    this.nav.focus(this.container.querySelector<HTMLElement>('.matches-row'));
+    this.nav.focus(this.container.querySelector<HTMLElement>('.matches-main'));
   }
 }
