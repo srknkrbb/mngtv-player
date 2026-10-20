@@ -197,22 +197,23 @@ export class MatchesView {
     morph(this.container, html`
       <div class="matches-view">
         <header class="matches-hero">
-          <h1>${t('matches.title')}</h1>
-          <p>${rows.length ? t('matches.summary', { count: rows.length, live: live.length }) : ''}</p>
+          <div class="matches-hero-text">
+            <h1>${t('matches.title')}</h1>
+            <p>${rows.length ? t('matches.summary', { count: rows.length, live: live.length }) : ''}</p>
+          </div>
+          ${rows.length
+            ? html`<button class="matches-toggle ${this.endedOpen ? 'open' : ''}" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
+                     <strong>${t('matches.ended')}</strong><span>${ended.length}</span>
+                     ${this.endedOpen ? html`<em>${t('common.close')}</em>` : ''}
+                   </button>`
+            : ''}
         </header>
         ${rows.length
           ? html`
             <div class="matches-columns ${this.endedOpen ? 'ended-open' : ''}">
               ${this.column('live', t('matches.now'), live, t('matches.noLive'), now)}
               ${this.column('upcoming', t('matches.upcoming'), upcoming, t('matches.noUpcoming'), now)}
-              ${this.endedOpen
-                ? this.column('ended', t('matches.ended'), ended, t('matches.noEnded'), now, true)
-                : html`
-                  <section class="matches-column matches-column-ended matches-column-collapsed" data-status="ended">
-                    <button class="matches-toggle" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
-                      <strong>${t('matches.ended')}</strong><span>${ended.length}</span>
-                    </button>
-                  </section>`}
+              ${this.endedOpen ? this.column('ended', t('matches.ended'), ended, t('matches.noEnded'), now) : ''}
             </div>`
           : html`
             <div class="matches-empty">
@@ -227,17 +228,13 @@ export class MatchesView {
     }
   }
 
-  private column(status: MatchStatus, label: string, rows: MatchRow[], emptyText: string, now: number, closable = false) {
+  private column(status: MatchStatus, label: string, rows: MatchRow[], emptyText: string, now: number) {
     return html`
       <section class="matches-column matches-column-${status}" data-status="${status}">
-        ${closable
-          ? html`<button class="matches-toggle matches-section-heading" data-focusable data-key="ended-toggle" data-match-action="toggle-ended">
-                   <strong>${label}</strong><span>${rows.length}</span><em>${t('common.close')}</em>
-                 </button>`
-          : html`<div class="matches-section-heading">
-                   <strong>${label}</strong>
-                   <span>${rows.length}</span>
-                 </div>`}
+        <div class="matches-section-heading">
+          <strong>${label}</strong>
+          <span>${rows.length}</span>
+        </div>
         <div class="matches-rows">
           ${rows.length ? rows.map(row => this.row(row, now)) : html`<p class="matches-column-empty">${emptyText}</p>`}
         </div>

@@ -22,6 +22,7 @@
    the full-screen player / loading views keep top:0 / full height. */
 body.tabbar-docked #view-channels,
 body.tabbar-docked #view-epg,
+body.tabbar-docked #view-matches,
 body.tabbar-docked #view-movies,
 body.tabbar-docked #view-series,
 body.tabbar-docked #view-search,
