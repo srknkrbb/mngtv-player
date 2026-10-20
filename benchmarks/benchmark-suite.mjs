@@ -1141,7 +1141,7 @@ export async function measureXMLTVPipelineBenchmark(options, io) {
   await io.collectGarbage();
   let workerTerminatedAfterIdle;
   if (!options.buffered) {
-    await io.delay(1100);
+    await io.delay(61_000); // mngtv: WORKER_IDLE_TERMINATION_MS 60 s
     workerTerminatedAfterIdle = !(await io.evaluate(inspectXMLTVWorkerRunning));
     if (!workerTerminatedAfterIdle) {
       throw new Error('XMLTV worker remained active after its idle timeout');
