@@ -151,6 +151,7 @@ let onSelect: ReturnType<typeof vi.fn>;
 let list: ChannelList;
 
 beforeEach(() => {
+  CONFIG.MNGTV.SIDEBAR.ENABLED = false; // upstream kenar cubugu testleri (mngtv bolumleri ayri testte)
   Element.prototype.scrollIntoView = vi.fn();
   data.favorites = [];
   data.includeHidden = false;
@@ -179,6 +180,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  CONFIG.MNGTV.SIDEBAR.ENABLED = true;
   Focus.setBase(() => null);
 });
 

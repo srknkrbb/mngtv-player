@@ -174,6 +174,7 @@ let onEpgOffsetChanged: ReturnType<typeof vi.fn>;
 let list: ChannelList;
 
 beforeEach(() => {
+  CONFIG.MNGTV.SIDEBAR.ENABLED = false; // upstream kenar cubugu testleri (mngtv bolumleri ayri testte)
   Element.prototype.scrollIntoView = vi.fn();
   Focus.pointerGone();
   data.favorites = [];
@@ -1190,6 +1191,7 @@ describe('ChannelList edit mode', () => {
     });
 
     afterEach(() => {
+  CONFIG.MNGTV.SIDEBAR.ENABLED = true;
       prompt.dispose();
       promptRoot.remove();
     });

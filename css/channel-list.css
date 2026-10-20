@@ -849,3 +849,14 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* mngtv: bolum basligi (TURKIYE SPOR / DUNYA SPOR / TV KANALLARI) bolumun ilk grubunun ustunde */
+.group-name { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
+.group-section {
+  margin-bottom: 2px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

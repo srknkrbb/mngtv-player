@@ -20,6 +20,8 @@ export const CONFIG = {
       NARROWING: true,             // sorgu oncekini uzatiyorsa yalniz onceki eslesme kumesi taranir
       NAME_PREFIX_INDEX: true,     // film/dizi adlari icin kelime-basi on-ek dizini
     },
+    // Kenar cubugu: "Tumu" yok; gruplar TR spor / dunya spor / TV bolumleri, ulke kodlu etiketler; Gunun Maclari gruplari gizli
+    SIDEBAR: { ENABLED: true as boolean },
     // Gunun Maclari gorunumu: bu desene uyan gruplardaki kanallar listelenir
     MATCHES: { GROUP_RE: /GUNUN MACLARI|GÜNÜN MAÇLARI|TODAY'?S MATCHES/i, REFRESH_MS: 60_000, NAME_TZ_OFFSET_MIN: 180, START_VIEW: true },
     // Sunucu tetiklemeli yenileme: {xtream}/mngtv/version.json ozeti degisince liste+EPG yenilenir.

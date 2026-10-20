@@ -509,4 +509,7 @@ export const TR_MESSAGES = {
   'matches.noEnded': 'Yakın zamanda biten maç yok.',
   'matches.yesterday': 'Dün',
   'matches.reminder': 'Hatırlat',
+  'channel.sectionTrSport': 'TÜRKİYE SPOR',
+  'channel.sectionWorldSport': 'DÜNYA SPOR',
+  'channel.sectionTv': 'TV KANALLARI',
 } as const satisfies MessageCatalog;

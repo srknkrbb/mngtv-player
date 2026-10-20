@@ -509,4 +509,7 @@ export const ZH_CN_MESSAGES = {
   'matches.noEnded': 'Nothing finished recently.',
   'matches.yesterday': 'Yesterday',
   'matches.reminder': 'Remind me',
+  'channel.sectionTrSport': 'TURKIYE SPOR',
+  'channel.sectionWorldSport': 'DUNYA SPOR',
+  'channel.sectionTv': 'TV KANALLARI',
 } satisfies MessageCatalog;
